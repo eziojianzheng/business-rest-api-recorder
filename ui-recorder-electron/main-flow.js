@@ -1139,106 +1139,106 @@ ipcMain.on('save-draft', async (event, { step }) => {
 });
 
 // ── Open existing session ─────────────────────────────────────────────────────
-ipcMain.on('open-session', async (event) => {
-    const { dialog } = require('electron');
-
-    const result = await dialog.showOpenDialog(mainWindow, {
-        title: '鎵撳紑宸叉湁浼氳瘽',
-        properties: ['openDirectory'],
-        buttonLabel: '鎵撳紑姝や細璇?,
-    });
-
-    if (result.canceled || !result.filePaths[0]) {
-        event.reply('session-open-canceled');
-        return;
-    }
-
-    const dir = result.filePaths[0];
-
-    // 璇诲彇鑽夌鐘舵€?
-    const draftFile = path.join(dir, 'draft-state.json');
-    let draft = null;
-    if (fs.existsSync(draftFile)) {
-        try { draft = JSON.parse(fs.readFileSync(draftFile, 'utf-8')); } catch(e) {}
-    }
-
-    // 鈹€鈹€ 鍚屾鍒?ui-recorder-workspace 鐩綍 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
-    const workspaceRoot = path.join(__dirname, '..');
-    const workspaceDir = path.join(workspaceRoot, 'ui-recorder-workspace');
-    fs.mkdirSync(workspaceDir, { recursive: true });
-
-    // 瀹氫箟闇€瑕佸悓姝ョ殑鏂囦欢
-    const filesToSync = [
-        { src: 'ui-script.js',       dest: 'ui-script.js' },
-        { src: 'semantic-script.md', dest: 'semantic-script.md' },
-        { src: 'api-script.spec.js', dest: 'api-script.spec.js' },
-        { src: 'network.har',        dest: 'network.har' },
-        { src: 'draft-state.json',   dest: 'draft-state.json' },
-        { src: 'semantic-context.md', dest: 'semantic-context.md' },
-        { src: 'api-context.md',      dest: 'api-context.md' },
-        { src: 'semantic-approved.flag', dest: 'semantic-approved.flag' },
-    ];
-
-    // 澶嶅埗鏂囦欢鍒?workspace
-    let syncedFiles = [];
-    filesToSync.forEach(({ src, dest }) => {
-        const srcPath = path.join(dir, src);
-        const destPath = path.join(workspaceDir, dest);
-        if (fs.existsSync(srcPath)) {
-            fs.copyFileSync(srcPath, destPath);
-            syncedFiles.push(src);
-        }
-    });
-
-    console.log(`[Open] 鍚屾鏂囦欢鍒?workspace: ${syncedFiles.join(', ')}`);
-
-    // 鎭㈠ session锛堟寚鍚?workspace 鐩綍锛?
-    session.dir = workspaceDir;
-    session.url = draft?.url || '';
-    session.step = draft?.step || 'record';
-
-    // 璇诲彇鍚勮剼鏈枃浠讹紙浠?workspace 鐩綍锛?
-    const uiFile  = path.join(workspaceDir, 'ui-script.js');
-    const semFile = path.join(workspaceDir, 'semantic-script.md');
-    const apiFile = path.join(workspaceDir, 'api-script.spec.js');
-
-    if (fs.existsSync(uiFile))  session.uiScript       = fs.readFileSync(uiFile, 'utf-8');
-    if (fs.existsSync(semFile)) session.semanticScript  = fs.readFileSync(semFile, 'utf-8');
-    if (fs.existsSync(apiFile)) session.apiScript       = fs.readFileSync(apiFile, 'utf-8');
-
-    // 瑙ｆ瀽 HAR锛堜粠 workspace 鐩綍锛?
-    const harFile = path.join(workspaceDir, 'network.har');
-    if (fs.existsSync(harFile)) {
-        try {
-            const har = JSON.parse(fs.readFileSync(harFile, 'utf-8'));
-            session.harApis = (har.log?.entries || []).map(e => ({
-                method:   e.request.method,
-                url:      e.request.url,
-                status:   e.response.status,
-                timestamp: e.startedDateTime,
-                postData: e.request.postData?.text || null,
-                response: e.response.content?.text || null,
-                mimeType: e.response.content?.mimeType || ''
-            }));
-        } catch(e) {}
-    }
-
-    console.log(`[Open] 宸叉墦寮€浼氳瘽: ${dir}, 姝ラ: ${session.step}, API鏁伴噺: ${session.harApis.length}`);
-    console.log(`[Open] Session dir 宸茶缃负: ${session.dir}`);
-    
-    event.reply('session-opened', {
-        dir:               workspaceDir,  // 杩斿洖 workspace 鐩綍
-        originalDir:       dir,           // 鍘熷鎵撳紑鐨勭洰褰?
-        step:              draft?.step || 1,
-        url:               session.url,
-        uiScript:          session.uiScript,
-        semanticScript:    session.semanticScript,
-        apiScript:         session.apiScript,
-        apiCount:          session.harApis.length,
-        harApis:           session.harApis,  // 鍙戦€佸畬鏁?API 鍒楄〃
-        semanticApproved:  fs.existsSync(path.join(workspaceDir, 'semantic-approved.flag')),
-    });
-});
+ipcMain.on('open-session', async (event) => {
+    const { dialog } = require('electron');
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: '打开已有会话',
+        properties: ['openDirectory'],
+        buttonLabel: '打开此会话',
+    });
+
+    if (result.canceled || !result.filePaths[0]) {
+        event.reply('session-open-canceled');
+        return;
+    }
+
+    const dir = result.filePaths[0];
+
+    // 读取草稿状态
+    const draftFile = path.join(dir, 'draft-state.json');
+    let draft = null;
+    if (fs.existsSync(draftFile)) {
+        try { draft = JSON.parse(fs.readFileSync(draftFile, 'utf-8')); } catch(e) {}
+    }
+
+    // 同步到 ui-recorder-workspace 目录
+    const workspaceRoot = path.join(__dirname, '..');
+    const workspaceDir = path.join(workspaceRoot, 'ui-recorder-workspace');
+    fs.mkdirSync(workspaceDir, { recursive: true });
+
+    // 定义需要同步的文件
+    const filesToSync = [
+        'ui-script.js',
+        'semantic-script.md',
+        'api-script.spec.js',
+        'network.har',
+        'draft-state.json',
+        'semantic-context.md',
+        'api-context.md',
+        'semantic-approved.flag'
+    ];
+
+    // 复制文件到 workspace
+    let syncedFiles = [];
+    filesToSync.forEach((fileName) => {
+        const srcPath = path.join(dir, fileName);
+        const destPath = path.join(workspaceDir, fileName);
+        if (fs.existsSync(srcPath)) {
+            fs.copyFileSync(srcPath, destPath);
+            syncedFiles.push(fileName);
+        }
+    });
+
+    console.log('[Open] 同步文件到 workspace: ' + syncedFiles.join(', '));
+
+    // 恢复 session（指向 workspace 目录）
+    session.dir = workspaceDir;
+    session.url = draft?.url || '';
+    session.step = draft?.step || 'record';
+
+    // 读取各脚本文件（从 workspace 目录）
+    const uiFile  = path.join(workspaceDir, 'ui-script.js');
+    const semFile = path.join(workspaceDir, 'semantic-script.md');
+    const apiFile = path.join(workspaceDir, 'api-script.spec.js');
+
+    if (fs.existsSync(uiFile))  session.uiScript       = fs.readFileSync(uiFile, 'utf-8');
+    if (fs.existsSync(semFile)) session.semanticScript  = fs.readFileSync(semFile, 'utf-8');
+    if (fs.existsSync(apiFile)) session.apiScript       = fs.readFileSync(apiFile, 'utf-8');
+
+    // 解析 HAR（从 workspace 目录）
+    const harFile = path.join(workspaceDir, 'network.har');
+    if (fs.existsSync(harFile)) {
+        try {
+            const har = JSON.parse(fs.readFileSync(harFile, 'utf-8'));
+            session.harApis = (har.log?.entries || []).map(e => ({
+                method:   e.request.method,
+                url:      e.request.url,
+                status:   e.response.status,
+                timestamp: e.startedDateTime,
+                postData: e.request.postData?.text || null,
+                response: e.response.content?.text || null,
+                mimeType: e.response.content?.mimeType || ''
+            }));
+        } catch(e) {}
+    }
+
+    console.log('[Open] 已打开会话: ' + dir + ', 步骤: ' + session.step + ', API数量: ' + session.harApis.length);
+    console.log('[Open] Session dir 已设置为: ' + session.dir);
+    
+    event.reply('session-opened', {
+        dir:               workspaceDir,
+        originalDir:       dir,
+        step:              draft?.step || 1,
+        url:               session.url,
+        uiScript:          session.uiScript,
+        semanticScript:    session.semanticScript,
+        apiScript:         session.apiScript,
+        apiCount:          session.harApis.length,
+        harApis:           session.harApis,
+        semanticApproved:  fs.existsSync(path.join(workspaceDir, 'semantic-approved.flag')),
+    });
+}););
 
 // ── Open folder in explorer ───────────────────────────────────────────────────
 ipcMain.on('open-folder', (event, { folderPath }) => {
