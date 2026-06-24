@@ -29,4 +29,12 @@ echo.
 echo ========================================
 echo 启动 UI Recorder
 echo ========================================
-npm start
+
+:: 使用 Electron 可执行文件启动
+if exist "node_modules\electron\dist\electron.exe" (
+    start "" "node_modules\electron\dist\electron.exe" "."
+    echo 应用已启动
+) else (
+    echo 错误：Electron 未找到
+    pause
+)

@@ -1,44 +1,32 @@
 @echo off
+chcp 65001 >nul
+cd /d "%~dp0"
+
 echo ========================================
-echo   UI Recorder - 启动脚本
+echo   Business REST API Recorder
 echo ========================================
 echo.
 
-echo [1/3] 检查 Python...
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo ✗ Python 未安装或不在 PATH 中
-    echo 请先安装 Python 3.8+
+:: Electron 路径
+set ELECTRON=ui-recorder-electron\node_modules\electron\dist\electron.exe
+
+:: 检查 Electron 是否存在
+if not exist "%ELECTRON%" (
+    echo [错误] Electron 未找到！
+    echo.
+    echo 请先安装依赖：
+    echo   cd ui-recorder-electron
+    echo   npm install
+    echo.
     pause
     exit /b 1
 )
-echo ✓ Python 已安装
+
+echo 启动应用...
+start "" "%ELECTRON%" "ui-recorder-electron"
 
 echo.
-echo [2/3] 检查依赖...
-cd ui-recorder\backend
-pip show fastapi >nul 2>&1
-if errorlevel 1 (
-    echo 正在安装依赖...
-    pip install fastapi uvicorn playwright websockets
-    python -m playwright install chromium
-)
-echo ✓ 依赖已就绪
-
+echo ✓ 应用已启动！
+echo 如果窗口没有显示，请检查任务栏。
 echo.
-echo [3/3] 启动后端服务...
-echo.
-echo ========================================
-echo   后端服务运行在: http://localhost:8000
-echo ========================================
-echo.
-echo 下一步:
-echo 1. 在浏览器打开 ui-recorder-pro.html
-echo 2. 安装 Chrome 扩展 (见 chrome-extension/INSTALL.txt)
-echo 3. 点击扩展图标开始录制
-echo.
-echo 按 Ctrl+C 停止服务
-echo ========================================
-echo.
-
-python main.py
+timeout /t 2 >nul

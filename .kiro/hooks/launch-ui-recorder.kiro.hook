@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Launch UI Recorder",
+  "description": "用户触发时启动 UI Recorder Electron 工具",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "cd ui-recorder-electron && start.bat"
+  }
+}
