@@ -565,7 +565,15 @@ function startRecording() {
 }
 
 ipcRenderer.on('recording-started', (e, data) => {
-  if (data.status === 'success') {
+  // 清空所有脚本显示（开始新录制）
+  document.getElementById('semantic-script-edit').value = '';
+  document.getElementById('semantic-preview').innerHTML = '<p style="color:#666;">点击"生成语义脚本"按钮...</p>';
+  document.getElementById('api-script-preview').value = '';
+  document.getElementById('api-script-edit').value = '';
+  document.getElementById('semantic-status').textContent = '';
+  document.getElementById('api-gen-status').textContent = '';
+  
+  if (data.url) {
     document.getElementById('record-status').textContent = '⏺ Playwright Inspector 已启动，请在浏览器中操作';
   }
 });
