@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+﻿const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn, fork } = require('child_process');
 const fs = require('fs');
@@ -7,17 +7,16 @@ let mainWindow;
 let codegenProcess = null;
 let replayProcess = null;
 
-// ── 辅助函数：运行 Node.js 脚本（不依赖系统 Node.js）────────────────────────
+// 鈹€鈹€ 杈呭姪鍑芥暟锛氳繍琛?Node.js 鑴氭湰锛堜笉渚濊禆绯荤粺 Node.js锛夆攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 function runNodeScript(scriptPath, args, options = {}) {
-    // 使用 Electron 内置的 Node.js 运行时
-    // 设置 ELECTRON_RUN_AS_NODE=1 让 electron.exe 以 Node.js 模式运行
+    // 浣跨敤 Electron 鍐呯疆鐨?Node.js 杩愯鏃?    // 璁剧疆 ELECTRON_RUN_AS_NODE=1 璁?electron.exe 浠?Node.js 妯″紡杩愯
     const env = { 
         ...process.env, 
         ...options.env,
         ELECTRON_RUN_AS_NODE: '1' 
     };
     
-    console.log('[runNodeScript] 启动子进程:');
+    console.log('[runNodeScript] 鍚姩瀛愯繘绋?');
     console.log('  - execPath:', process.execPath);
     console.log('  - scriptPath:', scriptPath);
     console.log('  - args:', args);
@@ -32,7 +31,7 @@ function runNodeScript(scriptPath, args, options = {}) {
     });
     
     childProcess.on('error', (err) => {
-        console.error('[runNodeScript] 进程启动失败:', err);
+        console.error('[runNodeScript] 杩涚▼鍚姩澶辫触:', err);
     });
     
     return childProcess;
@@ -68,7 +67,7 @@ function createWindow() {
 app.whenReady().then(() => {
     createWindow();
     
-    // 自动初始化 session，使用固定的 ui-recorder-workspace 目录
+    // 鑷姩鍒濆鍖?session锛屼娇鐢ㄥ浐瀹氱殑 ui-recorder-workspace 鐩綍
     const workspaceRoot = path.join(__dirname, '..');
     const dir = path.join(workspaceRoot, 'ui-recorder-workspace');
     fs.mkdirSync(dir, { recursive: true });
@@ -102,12 +101,11 @@ function cleanup() {
     if (replayProcess)  { replayProcess.kill();  replayProcess = null; }
 }
 
-// ── Create session ────────────────────────────────────────────────────────────
+// 鈹€鈹€ Create session 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('create-session', (event, url) => {
     const id = `session-${Date.now()}`;
-    // 固定放在工作区根目录的 ui-recorder-workspace 下，Kiro 可以直接读写
-    const workspaceRoot = path.join(__dirname, '..'); // ceta-ai-skills 根目录
-    const dir = path.join(workspaceRoot, 'ui-recorder-workspace');
+    // 鍥哄畾鏀惧湪宸ヤ綔鍖烘牴鐩綍鐨?ui-recorder-workspace 涓嬶紝Kiro 鍙互鐩存帴璇诲啓
+    const workspaceRoot = path.join(__dirname, '..'); // ceta-ai-skills 鏍圭洰褰?    const dir = path.join(workspaceRoot, 'ui-recorder-workspace');
     fs.mkdirSync(dir, { recursive: true });
 
     session = {
@@ -126,7 +124,7 @@ ipcMain.on('create-session', (event, url) => {
     event.reply('session-created', { id, dir });
 });
 
-// ── Upload seed data ──────────────────────────────────────────────────────────
+// 鈹€鈹€ Upload seed data 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('upload-seed-data', (event, data) => {
     if (!session || !session.dir) {
         console.error('[Seed Data] No active session');
@@ -142,7 +140,7 @@ ipcMain.on('upload-seed-data', (event, data) => {
     event.reply('seed-data-saved', { path: seedDataPath });
 });
 
-// ── Generate API Documentation ────────────────────────────────────────────────
+// 鈹€鈹€ Generate API Documentation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('generate-api-doc', (event) => {
     if (!session || !session.dir || !session.seedData) {
         console.error('[API Doc] No seed data available');
@@ -153,26 +151,26 @@ ipcMain.on('generate-api-doc', (event) => {
     const docFile = path.join(session.dir, 'api-documentation.md');
 
     const lines = [];
-    lines.push('# CETA API 文档生成请求');
+    lines.push('# CETA API 鏂囨。鐢熸垚璇锋眰');
     lines.push('');
-    lines.push(`**时间**: ${new Date().toLocaleString('zh-CN')}`);
-    lines.push(`**输出文件**: \`${docFile}\``);
+    lines.push(`**鏃堕棿**: ${new Date().toLocaleString('zh-CN')}`);
+    lines.push(`**杈撳嚭鏂囦欢**: \`${docFile}\``);
     lines.push('');
-    lines.push('## 项目信息');
+    lines.push('## 椤圭洰淇℃伅');
     lines.push('');
     
     if (session.seedData.project) {
-        lines.push(`**项目名称**: ${session.seedData.project.name || '未命名'}`);
-        lines.push(`**项目 Token**: ${session.seedData.project.token || 'N/A'}`);
+        lines.push(`**椤圭洰鍚嶇О**: ${session.seedData.project.name || '鏈懡鍚?}`);
+        lines.push(`**椤圭洰 Token**: ${session.seedData.project.token || 'N/A'}`);
         if (session.seedData.project.description) {
-            lines.push(`**项目描述**: ${session.seedData.project.description}`);
+            lines.push(`**椤圭洰鎻忚堪**: ${session.seedData.project.description}`);
         }
         lines.push('');
     }
 
-    // PBC 信息
+    // PBC 淇℃伅
     if (session.seedData.pbcs && session.seedData.pbcs.length > 0) {
-        lines.push(`## PBC 列表 (${session.seedData.pbcs.length} 个)`);
+        lines.push(`## PBC 鍒楄〃 (${session.seedData.pbcs.length} 涓?`);
         lines.push('');
         session.seedData.pbcs.forEach(pbc => {
             lines.push(`### ${pbc.name} (\`${pbc.token}\`)`);
@@ -183,30 +181,30 @@ ipcMain.on('generate-api-doc', (event) => {
         });
     }
 
-    // 表单实体详细信息
+    // 琛ㄥ崟瀹炰綋璇︾粏淇℃伅
     if (session.seedData.formEntities && session.seedData.formEntities.length > 0) {
-        lines.push(`## 表单实体 (${session.seedData.formEntities.length} 个)`);
+        lines.push(`## 琛ㄥ崟瀹炰綋 (${session.seedData.formEntities.length} 涓?`);
         lines.push('');
         session.seedData.formEntities.forEach(fe => {
             lines.push(`### ${fe.name} (\`${fe.token}\`)`);
             if (fe.pbcToken) {
-                lines.push(`**所属 PBC**: \`${fe.pbcToken}\``);
+                lines.push(`**鎵€灞?PBC**: \`${fe.pbcToken}\``);
             }
             if (fe.description) {
-                lines.push(`**描述**: ${fe.description}`);
+                lines.push(`**鎻忚堪**: ${fe.description}`);
             }
             lines.push('');
             
             if (fe.fields && fe.fields.length > 0) {
-                lines.push('**字段列表**:');
+                lines.push('**瀛楁鍒楄〃**:');
                 lines.push('');
-                lines.push('| 字段名 | Token | 类型 | 必填 | 描述 |');
+                lines.push('| 瀛楁鍚?| Token | 绫诲瀷 | 蹇呭～ | 鎻忚堪 |');
                 lines.push('|--------|-------|------|------|------|');
                 fe.fields.forEach(field => {
                     const name = field.name || field.label || '-';
                     const token = field.token || '-';
                     const type = field.type || field.fieldType || '-';
-                    const required = field.required ? '是' : '否';
+                    const required = field.required ? '鏄? : '鍚?;
                     const desc = field.description || '-';
                     lines.push(`| ${name} | \`${token}\` | ${type} | ${required} | ${desc} |`);
                 });
@@ -215,9 +213,9 @@ ipcMain.on('generate-api-doc', (event) => {
         });
     }
 
-    // 页面配置信息
+    // 椤甸潰閰嶇疆淇℃伅
     if (session.seedData.pages && session.seedData.pages.length > 0) {
-        lines.push(`## 页面配置 (${session.seedData.pages.length} 个)`);
+        lines.push(`## 椤甸潰閰嶇疆 (${session.seedData.pages.length} 涓?`);
         lines.push('');
         session.seedData.pages.forEach(page => {
             lines.push(`### ${page.name} (\`${page.schemaId}\`)`);
@@ -225,15 +223,15 @@ ipcMain.on('generate-api-doc', (event) => {
                 lines.push(`${page.description}`);
             }
             if (page.pbcToken) {
-                lines.push(`**所属 PBC**: \`${page.pbcToken}\``);
+                lines.push(`**鎵€灞?PBC**: \`${page.pbcToken}\``);
             }
             lines.push('');
         });
     }
 
-    // 流程定义信息
+    // 娴佺▼瀹氫箟淇℃伅
     if (session.seedData.flowDefinitions && session.seedData.flowDefinitions.length > 0) {
-        lines.push(`## 流程定义 (${session.seedData.flowDefinitions.length} 个)`);
+        lines.push(`## 娴佺▼瀹氫箟 (${session.seedData.flowDefinitions.length} 涓?`);
         lines.push('');
         session.seedData.flowDefinitions.forEach(flow => {
             lines.push(`### ${flow.name} (\`${flow.token}\`)`);
@@ -241,95 +239,94 @@ ipcMain.on('generate-api-doc', (event) => {
                 lines.push(`${flow.description}`);
             }
             if (flow.pbcToken) {
-                lines.push(`**所属 PBC**: \`${flow.pbcToken}\``);
+                lines.push(`**鎵€灞?PBC**: \`${flow.pbcToken}\``);
             }
             lines.push('');
         });
     }
 
     lines.push('');
-    lines.push('## 你的任务');
+    lines.push('## 浣犵殑浠诲姟');
     lines.push('');
-    lines.push('请根据上述 CETA 项目的 Seed Data 信息，生成一份**完整的 API 使用文档**，要求：');
+    lines.push('璇锋牴鎹笂杩?CETA 椤圭洰鐨?Seed Data 淇℃伅锛岀敓鎴愪竴浠?*瀹屾暣鐨?API 浣跨敤鏂囨。**锛岃姹傦細');
     lines.push('');
-    lines.push('### 1. API 端点列表');
+    lines.push('### 1. API 绔偣鍒楄〃');
     lines.push('');
-    lines.push('根据表单实体和页面配置，推断并列出所有可能的 API 端点，包括：');
+    lines.push('鏍规嵁琛ㄥ崟瀹炰綋鍜岄〉闈㈤厤缃紝鎺ㄦ柇骞跺垪鍑烘墍鏈夊彲鑳界殑 API 绔偣锛屽寘鎷細');
     lines.push('');
-    lines.push('- **CRUD 操作**: 每个表单实体的增删改查接口');
-    lines.push('  - `POST /form/api/v2/form-entity-data/{pbcToken}/{formEntityToken}/default` - 创建记录');
-    lines.push('  - `GET /form/api/v2/form-entity-data/{pbcToken}/{formEntityToken}/{id}` - 获取单条记录');
-    lines.push('  - `PUT /form/api/v2/form-entity-data/{pbcToken}/{formEntityToken}/{id}` - 更新记录');
-    lines.push('  - `DELETE /form/api/v2/form-entity-data/{pbcToken}/{formEntityToken}/{id}` - 删除记录');
-    lines.push('  - `POST /form/api/v3/form-entity-data/{pbcToken}/{formEntityToken}/list` - 列表查询');
+    lines.push('- **CRUD 鎿嶄綔**: 姣忎釜琛ㄥ崟瀹炰綋鐨勫鍒犳敼鏌ユ帴鍙?);
+    lines.push('  - `POST /form/api/v2/form-entity-data/{pbcToken}/{formEntityToken}/default` - 鍒涘缓璁板綍');
+    lines.push('  - `GET /form/api/v2/form-entity-data/{pbcToken}/{formEntityToken}/{id}` - 鑾峰彇鍗曟潯璁板綍');
+    lines.push('  - `PUT /form/api/v2/form-entity-data/{pbcToken}/{formEntityToken}/{id}` - 鏇存柊璁板綍');
+    lines.push('  - `DELETE /form/api/v2/form-entity-data/{pbcToken}/{formEntityToken}/{id}` - 鍒犻櫎璁板綍');
+    lines.push('  - `POST /form/api/v3/form-entity-data/{pbcToken}/{formEntityToken}/list` - 鍒楄〃鏌ヨ');
     lines.push('');
-    lines.push('- **表单布局接口**: 获取新增/编辑/查看表单的布局配置');
+    lines.push('- **琛ㄥ崟甯冨眬鎺ュ彛**: 鑾峰彇鏂板/缂栬緫/鏌ョ湅琛ㄥ崟鐨勫竷灞€閰嶇疆');
     lines.push('  - `GET /form/api/v2/form-entity-layout/{pbcToken}/{formEntityToken}/{layoutType}/schema-json`');
     lines.push('');
-    lines.push('- **页面配置接口**: 获取列表页、详情页的配置');
+    lines.push('- **椤甸潰閰嶇疆鎺ュ彛**: 鑾峰彇鍒楄〃椤点€佽鎯呴〉鐨勯厤缃?);
     lines.push('  - `GET /form/api/form-entity-page/get-by-schema-id/{pbcToken}/{schemaId}`');
     lines.push('');
-    lines.push('- **流程接口**: 流程定义、流程实例相关接口');
+    lines.push('- **娴佺▼鎺ュ彛**: 娴佺▼瀹氫箟銆佹祦绋嬪疄渚嬬浉鍏虫帴鍙?);
     lines.push('  - `GET /flow/api/flow-definition/{id}`');
     lines.push('  - `POST /flow/api/flow-instance/start`');
     lines.push('');
-    lines.push('### 2. 请求参数详解');
+    lines.push('### 2. 璇锋眰鍙傛暟璇﹁В');
     lines.push('');
-    lines.push('对于每个 API，详细说明：');
+    lines.push('瀵逛簬姣忎釜 API锛岃缁嗚鏄庯細');
     lines.push('');
-    lines.push('- **路径参数**: `{pbcToken}`, `{formEntityToken}`, `{id}` 等的含义和取值');
-    lines.push('- **请求体字段**: 每个字段的名称、类型、是否必填、取值范围');
-    lines.push('- **字段来源**: 说明字段值从哪里来');
-    lines.push('  - 用户输入的表单字段');
-    lines.push('  - 从其他接口获取的 ID（如关联字段）');
-    lines.push('  - 前端计算或生成的值');
-    lines.push('  - 系统自动填充的值（如当前用户 ID、时间戳）');
+    lines.push('- **璺緞鍙傛暟**: `{pbcToken}`, `{formEntityToken}`, `{id}` 绛夌殑鍚箟鍜屽彇鍊?);
+    lines.push('- **璇锋眰浣撳瓧娈?*: 姣忎釜瀛楁鐨勫悕绉般€佺被鍨嬨€佹槸鍚﹀繀濉€佸彇鍊艰寖鍥?);
+    lines.push('- **瀛楁鏉ユ簮**: 璇存槑瀛楁鍊间粠鍝噷鏉?);
+    lines.push('  - 鐢ㄦ埛杈撳叆鐨勮〃鍗曞瓧娈?);
+    lines.push('  - 浠庡叾浠栨帴鍙ｈ幏鍙栫殑 ID锛堝鍏宠仈瀛楁锛?);
+    lines.push('  - 鍓嶇璁＄畻鎴栫敓鎴愮殑鍊?);
+    lines.push('  - 绯荤粺鑷姩濉厖鐨勫€硷紙濡傚綋鍓嶇敤鎴?ID銆佹椂闂存埑锛?);
     lines.push('');
-    lines.push('### 3. 字段依赖关系');
+    lines.push('### 3. 瀛楁渚濊禆鍏崇郴');
     lines.push('');
-    lines.push('说明字段之间的依赖关系，例如：');
+    lines.push('璇存槑瀛楁涔嬮棿鐨勪緷璧栧叧绯伙紝渚嬪锛?);
     lines.push('');
-    lines.push('- 创建订单时，`bom` 字段需要先调用 BOM 列表接口获取可选项，然后传递选中的 BOM 的 `id`');
-    lines.push('- `factory` 字段依赖工厂列表接口，需要传递工厂对象的 `id`');
-    lines.push('- 关联字段（如 `userField`、`organizationField`）需要传递完整的对象结构，包含 `pbcToken`、`formEntityToken`、`label`、`value` 等');
+    lines.push('- 鍒涘缓璁㈠崟鏃讹紝`bom` 瀛楁闇€瑕佸厛璋冪敤 BOM 鍒楄〃鎺ュ彛鑾峰彇鍙€夐」锛岀劧鍚庝紶閫掗€変腑鐨?BOM 鐨?`id`');
+    lines.push('- `factory` 瀛楁渚濊禆宸ュ巶鍒楄〃鎺ュ彛锛岄渶瑕佷紶閫掑伐鍘傚璞＄殑 `id`');
+    lines.push('- 鍏宠仈瀛楁锛堝 `userField`銆乣organizationField`锛夐渶瑕佷紶閫掑畬鏁寸殑瀵硅薄缁撴瀯锛屽寘鍚?`pbcToken`銆乣formEntityToken`銆乣label`銆乣value` 绛?);
     lines.push('');
-    lines.push('### 4. 典型业务流程');
+    lines.push('### 4. 鍏稿瀷涓氬姟娴佺▼');
     lines.push('');
-    lines.push('描述常见的业务操作流程，例如：');
+    lines.push('鎻忚堪甯歌鐨勪笟鍔℃搷浣滄祦绋嬶紝渚嬪锛?);
     lines.push('');
-    lines.push('**新增记录流程**:');
-    lines.push('1. 获取表单布局配置（了解需要填写哪些字段）');
-    lines.push('2. 加载关联字段的选项列表（如数据字典、主数据）');
-    lines.push('3. 用户填写表单');
-    lines.push('4. 提交创建请求，传递完整的字段值');
-    lines.push('5. 返回列表页，刷新数据');
+    lines.push('**鏂板璁板綍娴佺▼**:');
+    lines.push('1. 鑾峰彇琛ㄥ崟甯冨眬閰嶇疆锛堜簡瑙ｉ渶瑕佸～鍐欏摢浜涘瓧娈碉級');
+    lines.push('2. 鍔犺浇鍏宠仈瀛楁鐨勯€夐」鍒楄〃锛堝鏁版嵁瀛楀吀銆佷富鏁版嵁锛?);
+    lines.push('3. 鐢ㄦ埛濉啓琛ㄥ崟');
+    lines.push('4. 鎻愪氦鍒涘缓璇锋眰锛屼紶閫掑畬鏁寸殑瀛楁鍊?);
+    lines.push('5. 杩斿洖鍒楄〃椤碉紝鍒锋柊鏁版嵁');
     lines.push('');
-    lines.push('**列表查询流程**:');
-    lines.push('1. 获取页面配置（列定义、筛选器配置）');
-    lines.push('2. 调用列表接口，传递分页参数和筛选条件');
-    lines.push('3. 渲染列表数据');
+    lines.push('**鍒楄〃鏌ヨ娴佺▼**:');
+    lines.push('1. 鑾峰彇椤甸潰閰嶇疆锛堝垪瀹氫箟銆佺瓫閫夊櫒閰嶇疆锛?);
+    lines.push('2. 璋冪敤鍒楄〃鎺ュ彛锛屼紶閫掑垎椤靛弬鏁板拰绛涢€夋潯浠?);
+    lines.push('3. 娓叉煋鍒楄〃鏁版嵁');
     lines.push('');
-    lines.push('### 5. 常见问题和注意事项');
+    lines.push('### 5. 甯歌闂鍜屾敞鎰忎簨椤?);
     lines.push('');
-    lines.push('- **关联字段的数据结构**: 说明关联字段（如 `userField`、`factory`、`area`）需要传递的完整对象结构');
-    lines.push('- **ID 的获取方式**: 说明各种 ID（表单实体 ID、记录 ID、关联对象 ID）从哪里获取');
-    lines.push('- **必填字段**: 列出每个表单实体的必填字段');
-    lines.push('- **字段类型转换**: 说明日期、数字等特殊类型的格式要求');
+    lines.push('- **鍏宠仈瀛楁鐨勬暟鎹粨鏋?*: 璇存槑鍏宠仈瀛楁锛堝 `userField`銆乣factory`銆乣area`锛夐渶瑕佷紶閫掔殑瀹屾暣瀵硅薄缁撴瀯');
+    lines.push('- **ID 鐨勮幏鍙栨柟寮?*: 璇存槑鍚勭 ID锛堣〃鍗曞疄浣?ID銆佽褰?ID銆佸叧鑱斿璞?ID锛変粠鍝噷鑾峰彇');
+    lines.push('- **蹇呭～瀛楁**: 鍒楀嚭姣忎釜琛ㄥ崟瀹炰綋鐨勫繀濉瓧娈?);
+    lines.push('- **瀛楁绫诲瀷杞崲**: 璇存槑鏃ユ湡銆佹暟瀛楃瓑鐗规畩绫诲瀷鐨勬牸寮忚姹?);
     lines.push('');
-    lines.push('### 输出格式');
+    lines.push('### 杈撳嚭鏍煎紡');
     lines.push('');
-    lines.push('使用 Markdown 格式，结构清晰，包含代码示例。保存到指定的输出文件。');
+    lines.push('浣跨敤 Markdown 鏍煎紡锛岀粨鏋勬竻鏅帮紝鍖呭惈浠ｇ爜绀轰緥銆備繚瀛樺埌鎸囧畾鐨勮緭鍑烘枃浠躲€?);
     lines.push('');
 
     fs.writeFileSync(contextFile, lines.join('\n'), 'utf-8');
     console.log(`[API Doc] Context written to: ${contextFile}`);
 
-    // 生成触发语
-    const triggerMsg = `请读取 ui-recorder-workspace/api-doc-context.md，按照其中的要求生成完整的 CETA API 文档并保存到 ui-recorder-workspace/api-documentation.md`;
+    // 鐢熸垚瑙﹀彂璇?    const triggerMsg = `璇疯鍙?ui-recorder-workspace/api-doc-context.md锛屾寜鐓у叾涓殑瑕佹眰鐢熸垚瀹屾暣鐨?CETA API 鏂囨。骞朵繚瀛樺埌 ui-recorder-workspace/api-documentation.md`;
 
     event.reply('api-doc-context-ready', { triggerMsg });
 
-    // 监听文档文件生成
+    // 鐩戝惉鏂囨。鏂囦欢鐢熸垚
     startWatchingApiDoc(docFile);
 });
 
@@ -341,10 +338,10 @@ function startWatchingApiDoc(filePath) {
     const checkInterval = setInterval(() => {
         if (fs.existsSync(filePath)) {
             clearInterval(checkInterval);
-            console.log('[API Doc] 文档已生成');
+            console.log('[API Doc] 鏂囨。宸茬敓鎴?);
             
             const content = fs.readFileSync(filePath, 'utf-8');
-            const preview = content.substring(0, 1000); // 前1000字符作为预览
+            const preview = content.substring(0, 1000); // 鍓?000瀛楃浣滀负棰勮
             
             mainWindow.webContents.send('api-doc-done', { 
                 docPath: filePath,
@@ -353,12 +350,11 @@ function startWatchingApiDoc(filePath) {
         }
     }, 1000);
 
-    // 10分钟后停止轮询
-    setTimeout(() => clearInterval(checkInterval), 10 * 60 * 1000);
+    // 10鍒嗛挓鍚庡仠姝㈣疆璇?    setTimeout(() => clearInterval(checkInterval), 10 * 60 * 1000);
 }
 
 
-// ── Start recording ───────────────────────────────────────────────────────────
+// 鈹€鈹€ Start recording 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('start-recording', async (event, url) => {
     session.url = url;
     const outputFile = path.join(session.dir, 'ui-script.js');
@@ -367,8 +363,8 @@ ipcMain.on('start-recording', async (event, url) => {
     if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
     if (fs.existsSync(harFile))    fs.unlinkSync(harFile);
 
-    // 使用 Electron 内置的 Node.js 运行时，不依赖系统 Node.js
-    // playwright-core/cli.js 是 Playwright 的 CLI 入口
+    // 浣跨敤 Electron 鍐呯疆鐨?Node.js 杩愯鏃讹紝涓嶄緷璧栫郴缁?Node.js
+    // playwright-core/cli.js 鏄?Playwright 鐨?CLI 鍏ュ彛
     const playwrightCli = path.join(__dirname, 'node_modules', 'playwright-core', 'cli.js');
     const args = [
         'codegen',
@@ -439,30 +435,29 @@ ipcMain.on('start-recording', async (event, url) => {
     event.reply('recording-started', { status: 'success' });
 });
 
-// ── Stop recording ────────────────────────────────────────────────────────────
+// 鈹€鈹€ Stop recording 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('stop-recording', (event) => {
     if (codegenProcess) { codegenProcess.kill(); codegenProcess = null; }
     event.reply('recording-stopped', {});
 });
 
-// ── Replay UI script ──────────────────────────────────────────────────────────
+// 鈹€鈹€ Replay UI script 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('replay-ui', async (event) => {
     const scriptFile = path.join(session.dir, 'ui-script.js');
     if (!fs.existsSync(scriptFile)) {
-        mainWindow.webContents.send('replay-log', { type: 'fail', msg: '✗ 找不到脚本文件，请先录制' });
+        mainWindow.webContents.send('replay-log', { type: 'fail', msg: '鉁?鎵句笉鍒拌剼鏈枃浠讹紝璇峰厛褰曞埗' });
         mainWindow.webContents.send('replay-result', { success: false, code: 1 });
         return;
     }
 
-    // 读取最新脚本，复制到本地目录运行（避免路径空格问题）
-    const script = fs.readFileSync(scriptFile, 'utf-8');
+    // 璇诲彇鏈€鏂拌剼鏈紝澶嶅埗鍒版湰鍦扮洰褰曡繍琛岋紙閬垮厤璺緞绌烘牸闂锛?    const script = fs.readFileSync(scriptFile, 'utf-8');
     const testFile = path.join(__dirname, 'replay-test.spec.js');
     fs.writeFileSync(testFile, script, 'utf-8');
 
-    mainWindow.webContents.send('replay-log', { type: 'info', msg: '开始回放...' });
-    mainWindow.webContents.send('replay-log', { type: 'info', msg: `脚本: ${scriptFile}` });
+    mainWindow.webContents.send('replay-log', { type: 'info', msg: '寮€濮嬪洖鏀?..' });
+    mainWindow.webContents.send('replay-log', { type: 'info', msg: `鑴氭湰: ${scriptFile}` });
 
-    // 使用 Electron 内置的 Node.js 运行时，不依赖系统 Node.js
+    // 浣跨敤 Electron 鍐呯疆鐨?Node.js 杩愯鏃讹紝涓嶄緷璧栫郴缁?Node.js
     const playwrightCli = path.join(__dirname, 'node_modules', '@playwright', 'test', 'cli.js');
     
     replayProcess = runNodeScript(playwrightCli, [
@@ -486,7 +481,7 @@ ipcMain.on('replay-ui', async (event) => {
     });
 
     replayProcess.on('close', code => {
-        // 运行完再删除临时文件
+        // 杩愯瀹屽啀鍒犻櫎涓存椂鏂囦欢
         try { fs.unlinkSync(testFile); } catch(e) {}
         const success = code === 0;
         mainWindow.webContents.send('replay-result', { success, code });
@@ -494,13 +489,13 @@ ipcMain.on('replay-ui', async (event) => {
     });
 });
 
-// ── Stop replay ───────────────────────────────────────────────────────────────
+// 鈹€鈹€ Stop replay 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('stop-replay', (event) => {
     if (replayProcess) { replayProcess.kill(); replayProcess = null; }
     event.reply('replay-stopped', {});
 });
 
-// ── Update UI script (from Kiro AI edits) ────────────────────────────────────
+// 鈹€鈹€ Update UI script (from Kiro AI edits) 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('update-ui-script', (event, script) => {
     session.uiScript = script;
     const scriptFile = path.join(session.dir, 'ui-script.js');
@@ -509,12 +504,11 @@ ipcMain.on('update-ui-script', (event, script) => {
     event.reply('script-updated', {});
 });
 
-// ── Generate semantic script（由 Kiro AI 生成）────────────────────────────────
+// 鈹€鈹€ Generate semantic script锛堢敱 Kiro AI 鐢熸垚锛夆攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('generate-semantic', (event) => {
     if (!session.dir) return;
 
-    // 过滤业务 API（去掉静态资源和噪音）
-    const businessApis = session.harApis.filter(a => {
+    // 杩囨护涓氬姟 API锛堝幓鎺夐潤鎬佽祫婧愬拰鍣煶锛?    const businessApis = session.harApis.filter(a => {
         const u = a.url.toLowerCase();
         return (u.includes('/api/') || a.mimeType?.includes('json')) &&
                !u.match(/\.(js|css|png|jpg|svg|ico|woff|ttf|woff2|map)(\?|$)/) &&
@@ -527,34 +521,33 @@ ipcMain.on('generate-semantic', (event) => {
                !u.includes('/user/usage') && !u.includes('/user-profile-config');
     });
 
-    // 写入上下文文件供 Kiro 读取
+    // 鍐欏叆涓婁笅鏂囨枃浠朵緵 Kiro 璇诲彇
     const contextFile = path.join(session.dir, 'semantic-context.md');
     const semFile     = path.join(session.dir, 'semantic-script.md');
 
     const lines = [];
-    lines.push('# UI Recorder - 语义脚本生成请求');
+    lines.push('# UI Recorder - 璇箟鑴氭湰鐢熸垚璇锋眰');
     lines.push('');
-    lines.push(`**时间**: ${new Date().toLocaleString('zh-CN')}`);
-    lines.push(`**输出文件**: \`${semFile}\``);
+    lines.push(`**鏃堕棿**: ${new Date().toLocaleString('zh-CN')}`);
+    lines.push(`**杈撳嚭鏂囦欢**: \`${semFile}\``);
     lines.push('');
     
-    // 如果有 seed data，添加项目结构信息
-    if (session.seedData) {
-        lines.push('## 项目结构信息（来自 Seed Data）');
+    // 濡傛灉鏈?seed data锛屾坊鍔犻」鐩粨鏋勪俊鎭?    if (session.seedData) {
+        lines.push('## 椤圭洰缁撴瀯淇℃伅锛堟潵鑷?Seed Data锛?);
         lines.push('');
         if (session.seedData.project) {
-            lines.push(`**项目名称**: ${session.seedData.project.name || '未命名'}`);
-            lines.push(`**项目 Token**: ${session.seedData.project.token || 'N/A'}`);
+            lines.push(`**椤圭洰鍚嶇О**: ${session.seedData.project.name || '鏈懡鍚?}`);
+            lines.push(`**椤圭洰 Token**: ${session.seedData.project.token || 'N/A'}`);
             if (session.seedData.project.description) {
-                lines.push(`**项目描述**: ${session.seedData.project.description}`);
+                lines.push(`**椤圭洰鎻忚堪**: ${session.seedData.project.description}`);
             }
             lines.push('');
         }
         
         if (session.seedData.pbcs && session.seedData.pbcs.length > 0) {
-            lines.push(`**PBC 数量**: ${session.seedData.pbcs.length}`);
+            lines.push(`**PBC 鏁伴噺**: ${session.seedData.pbcs.length}`);
             lines.push('');
-            lines.push('**PBC 列表**:');
+            lines.push('**PBC 鍒楄〃**:');
             session.seedData.pbcs.forEach(pbc => {
                 lines.push(`- ${pbc.name} (\`${pbc.token}\`)`);
                 if (pbc.description) {
@@ -565,86 +558,86 @@ ipcMain.on('generate-semantic', (event) => {
         }
         
         if (session.seedData.formEntities && session.seedData.formEntities.length > 0) {
-            lines.push(`**表单实体数量**: ${session.seedData.formEntities.length}`);
+            lines.push(`**琛ㄥ崟瀹炰綋鏁伴噺**: ${session.seedData.formEntities.length}`);
             lines.push('');
-            lines.push('**主要表单实体**（前10个）:');
+            lines.push('**涓昏琛ㄥ崟瀹炰綋**锛堝墠10涓級:');
             session.seedData.formEntities.slice(0, 10).forEach(fe => {
                 lines.push(`- ${fe.name} (\`${fe.token}\`)`);
                 if (fe.fields && fe.fields.length > 0) {
                     const fieldNames = fe.fields.slice(0, 5).map(f => f.name || f.token).join(', ');
-                    lines.push(`  字段: ${fieldNames}${fe.fields.length > 5 ? ` ... (共${fe.fields.length}个)` : ''}`);
+                    lines.push(`  瀛楁: ${fieldNames}${fe.fields.length > 5 ? ` ... (鍏?{fe.fields.length}涓?` : ''}`);
                 }
             });
             lines.push('');
         }
         
-        lines.push('> 💡 **提示**: 生成语义脚本时，请结合上述项目结构信息，识别 UI 操作对应的表单实体和字段，提供更准确的业务描述。');
+        lines.push('> 馃挕 **鎻愮ず**: 鐢熸垚璇箟鑴氭湰鏃讹紝璇风粨鍚堜笂杩伴」鐩粨鏋勪俊鎭紝璇嗗埆 UI 鎿嶄綔瀵瑰簲鐨勮〃鍗曞疄浣撳拰瀛楁锛屾彁渚涙洿鍑嗙‘鐨勪笟鍔℃弿杩般€?);
         lines.push('');
     }
     
-    lines.push('## UI 脚本');
+    lines.push('## UI 鑴氭湰');
     lines.push('```javascript');
-    lines.push(session.uiScript || '// 暂无脚本');
+    lines.push(session.uiScript || '// 鏆傛棤鑴氭湰');
     lines.push('```');
     lines.push('');
-    lines.push('## 业务 API 列表');
-    lines.push(`共 ${businessApis.length} 个业务接口：`);
+    lines.push('## 涓氬姟 API 鍒楄〃');
+    lines.push(`鍏?${businessApis.length} 涓笟鍔℃帴鍙ｏ細`);
     lines.push('');
     businessApis.forEach((a, i) => {
         let pathname = a.url;
         try { pathname = new URL(a.url).pathname; } catch {}
-        lines.push(`${i + 1}. \`${a.method} ${pathname}\` → ${a.status}`);
+        lines.push(`${i + 1}. \`${a.method} ${pathname}\` 鈫?${a.status}`);
         if (a.postData) {
             try {
                 const data = JSON.parse(a.postData);
                 const keys = Object.keys(data).slice(0, 5).join(', ');
-                if (keys) lines.push(`   请求体字段: ${keys}`);
+                if (keys) lines.push(`   璇锋眰浣撳瓧娈? ${keys}`);
             } catch {}
         }
     });
     lines.push('');
-    lines.push('## 你的任务');
+    lines.push('## 浣犵殑浠诲姟');
     lines.push('');
-    lines.push('请根据上面的 UI 脚本和业务 API，生成一份**业务语义脚本**，要求：');
+    lines.push('璇锋牴鎹笂闈㈢殑 UI 鑴氭湰鍜屼笟鍔?API锛岀敓鎴愪竴浠?*涓氬姟璇箟鑴氭湰**锛岃姹傦細');
     lines.push('');
-    lines.push('1. **用自然语言描述业务流程**（不是技术描述，是业务人员能看懂的）');
-    lines.push('2. **推断业务场景名称**（如：新增学生信息、用户登录、查询订单等）');
-    lines.push('3. **描述每个操作步骤的业务含义**（不是"点击按钮"，而是"用户发起新增操作"）');
-    lines.push('4. **关联 UI 操作和 API 调用**（说明哪个操作触发了哪个接口）');
-    lines.push('5. **提取测试数据**（录制时用的账号、填写的字段值等）');
+    lines.push('1. **鐢ㄨ嚜鐒惰瑷€鎻忚堪涓氬姟娴佺▼**锛堜笉鏄妧鏈弿杩帮紝鏄笟鍔′汉鍛樿兘鐪嬫噦鐨勶級');
+    lines.push('2. **鎺ㄦ柇涓氬姟鍦烘櫙鍚嶇О**锛堝锛氭柊澧炲鐢熶俊鎭€佺敤鎴风櫥褰曘€佹煡璇㈣鍗曠瓑锛?);
+    lines.push('3. **鎻忚堪姣忎釜鎿嶄綔姝ラ鐨勪笟鍔″惈涔?*锛堜笉鏄?鐐瑰嚮鎸夐挳"锛岃€屾槸"鐢ㄦ埛鍙戣捣鏂板鎿嶄綔"锛?);
+    lines.push('4. **鍏宠仈 UI 鎿嶄綔鍜?API 璋冪敤**锛堣鏄庡摢涓搷浣滆Е鍙戜簡鍝釜鎺ュ彛锛?);
+    lines.push('5. **鎻愬彇娴嬭瘯鏁版嵁**锛堝綍鍒舵椂鐢ㄧ殑璐﹀彿銆佸～鍐欑殑瀛楁鍊肩瓑锛?);
     if (session.seedData) {
-        lines.push('6. **结合项目结构信息**（识别操作对应的表单实体、字段名称，提供准确的业务术语）');
+        lines.push('6. **缁撳悎椤圭洰缁撴瀯淇℃伅**锛堣瘑鍒搷浣滃搴旂殑琛ㄥ崟瀹炰綋銆佸瓧娈靛悕绉帮紝鎻愪緵鍑嗙‘鐨勪笟鍔℃湳璇級');
     }
     lines.push('');
-    lines.push('输出格式为 Markdown，保存到：');
+    lines.push('杈撳嚭鏍煎紡涓?Markdown锛屼繚瀛樺埌锛?);
     lines.push(`\`${semFile}\``);
     lines.push('');
-    lines.push('保存后 Electron 工具会自动检测并显示。');
+    lines.push('淇濆瓨鍚?Electron 宸ュ叿浼氳嚜鍔ㄦ娴嬪苟鏄剧ず銆?);
 
     fs.writeFileSync(contextFile, lines.join('\n'), 'utf-8');
-    console.log('[Semantic] 上下文已写入:', contextFile);
+    console.log('[Semantic] 涓婁笅鏂囧凡鍐欏叆:', contextFile);
 
-    // 删除旧的确认文件（重新生成时需要重新确认）
+    // 鍒犻櫎鏃х殑纭鏂囦欢锛堥噸鏂扮敓鎴愭椂闇€瑕侀噸鏂扮‘璁わ級
     const approvalFile = path.join(session.dir, 'semantic-approved.flag');
     if (fs.existsSync(approvalFile)) {
         fs.unlinkSync(approvalFile);
-        console.log('[Semantic] 已清除旧的确认标记');
+        console.log('[Semantic] 宸叉竻闄ゆ棫鐨勭‘璁ゆ爣璁?);
     }
 
-    // 监听语义文件变化（Kiro 生成后自动更新界面）
+    // 鐩戝惉璇箟鏂囦欢鍙樺寲锛圞iro 鐢熸垚鍚庤嚜鍔ㄦ洿鏂扮晫闈級
     startWatchingSemanticFile(semFile);
 
-    // 监听确认文件（Kiro 确认后解锁下一步）
+    // 鐩戝惉纭鏂囦欢锛圞iro 纭鍚庤В閿佷笅涓€姝ワ級
     startWatchingSemanticApproval(approvalFile);
 
     event.reply('semantic-context-ready', {
         contextFile,
         semFile,
-        triggerMsg: `请读取 ui-recorder-workspace/semantic-context.md，按照其中的要求生成语义脚本并保存到指定文件。`
+        triggerMsg: `璇疯鍙?ui-recorder-workspace/semantic-context.md锛屾寜鐓у叾涓殑瑕佹眰鐢熸垚璇箟鑴氭湰骞朵繚瀛樺埌鎸囧畾鏂囦欢銆俙
     });
 });
 
-// ── Generate API script ───────────────────────────────────────────────────────
+// 鈹€鈹€ Generate API script 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('generate-api-script', (event) => {
     if (!session.dir) return;
 
@@ -669,65 +662,65 @@ ipcMain.on('generate-api-script', (event) => {
     const semanticContent = fs.existsSync(semFile) ? fs.readFileSync(semFile, 'utf-8') : '';
 
     const lines = [];
-    lines.push('# UI Recorder - API 脚本生成请求');
+    lines.push('# UI Recorder - API 鑴氭湰鐢熸垚璇锋眰');
     lines.push('');
-    lines.push(`**时间**: ${new Date().toLocaleString('zh-CN')}`);
-    lines.push(`**输出文件**: \`${apiFile}\``);
+    lines.push(`**鏃堕棿**: ${new Date().toLocaleString('zh-CN')}`);
+    lines.push(`**杈撳嚭鏂囦欢**: \`${apiFile}\``);
     lines.push('');
     if (semanticContent) {
-        lines.push('## 语义脚本（业务上下文）');
+        lines.push('## 璇箟鑴氭湰锛堜笟鍔′笂涓嬫枃锛?);
         lines.push(semanticContent);
         lines.push('');
     }
-    lines.push('## UI 脚本');
+    lines.push('## UI 鑴氭湰');
     lines.push('```javascript');
-    lines.push(session.uiScript || '// 暂无脚本');
+    lines.push(session.uiScript || '// 鏆傛棤鑴氭湰');
     lines.push('```');
     lines.push('');
-    lines.push('## 业务 API 列表');
-    lines.push(`共 ${businessApis.length} 个业务接口：`);
+    lines.push('## 涓氬姟 API 鍒楄〃');
+    lines.push(`鍏?${businessApis.length} 涓笟鍔℃帴鍙ｏ細`);
     lines.push('');
     businessApis.forEach((a, i) => {
         let pathname = a.url;
         try { pathname = new URL(a.url).pathname; } catch {}
-        lines.push(`${i + 1}. \`${a.method} ${pathname}\` → ${a.status}`);
+        lines.push(`${i + 1}. \`${a.method} ${pathname}\` 鈫?${a.status}`);
         if (a.postData) {
             try {
                 const data = JSON.parse(a.postData);
                 const keys = Object.keys(data).slice(0, 5).join(', ');
-                if (keys) lines.push(`   请求体字段: ${keys}`);
+                if (keys) lines.push(`   璇锋眰浣撳瓧娈? ${keys}`);
             } catch {}
             if (typeof a.postData === 'string' && a.postData.length < 500) {
-                lines.push(`   请求体: \`${a.postData}\``);
+                lines.push(`   璇锋眰浣? \`${a.postData}\``);
             }
         }
         if (a.response && a.mimeType?.includes('json')) {
             try {
                 const resp = JSON.parse(a.response);
                 const keys = Object.keys(resp).slice(0, 5).join(', ');
-                if (keys) lines.push(`   响应字段: ${keys}`);
+                if (keys) lines.push(`   鍝嶅簲瀛楁: ${keys}`);
             } catch {}
         }
     });
     lines.push('');
-    lines.push('## 你的任务');
+    lines.push('## 浣犵殑浠诲姟');
     lines.push('');
-    lines.push('请根据上面的语义脚本、UI 脚本和业务 API，生成一份 **Playwright API 测试脚本**，要求：');
+    lines.push('璇锋牴鎹笂闈㈢殑璇箟鑴氭湰銆乁I 鑴氭湰鍜屼笟鍔?API锛岀敓鎴愪竴浠?**Playwright API 娴嬭瘯鑴氭湰**锛岃姹傦細');
     lines.push('');
-    lines.push('1. 使用 `@playwright/test` 的 `request` API（不是 `page`）');
-    lines.push('2. 按业务流程顺序组织测试（登录 → 查询 → 创建/更新/删除）');
-    lines.push('3. 登录接口需要提取 token，传给后续请求的 Authorization header');
-    lines.push('4. 每个接口加状态码断言，关键接口加响应体断言');
-    lines.push('5. 使用 `test.describe` 按业务场景分组');
-    lines.push('6. 使用 `const { test, expect, request } = require("@playwright/test");`（不用 import）');
+    lines.push('1. 浣跨敤 `@playwright/test` 鐨?`request` API锛堜笉鏄?`page`锛?);
+    lines.push('2. 鎸変笟鍔℃祦绋嬮『搴忕粍缁囨祴璇曪紙鐧诲綍 鈫?鏌ヨ 鈫?鍒涘缓/鏇存柊/鍒犻櫎锛?);
+    lines.push('3. 鐧诲綍鎺ュ彛闇€瑕佹彁鍙?token锛屼紶缁欏悗缁姹傜殑 Authorization header');
+    lines.push('4. 姣忎釜鎺ュ彛鍔犵姸鎬佺爜鏂█锛屽叧閿帴鍙ｅ姞鍝嶅簲浣撴柇瑷€');
+    lines.push('5. 浣跨敤 `test.describe` 鎸変笟鍔″満鏅垎缁?);
+    lines.push('6. 浣跨敤 `const { test, expect, request } = require("@playwright/test");`锛堜笉鐢?import锛?);
     lines.push('');
-    lines.push('输出为可直接运行的 Playwright 测试脚本，保存到：');
+    lines.push('杈撳嚭涓哄彲鐩存帴杩愯鐨?Playwright 娴嬭瘯鑴氭湰锛屼繚瀛樺埌锛?);
     lines.push(`\`${apiFile}\``);
     lines.push('');
-    lines.push('保存后 Electron 工具会自动检测并显示。');
+    lines.push('淇濆瓨鍚?Electron 宸ュ叿浼氳嚜鍔ㄦ娴嬪苟鏄剧ず銆?);
 
     fs.writeFileSync(contextFile, lines.join('\n'), 'utf-8');
-    console.log('[API Script] 上下文已写入:', contextFile);
+    console.log('[API Script] 涓婁笅鏂囧凡鍐欏叆:', contextFile);
 
     // Watch for Kiro to write the api script file
     startWatchingApiScriptFile(apiFile);
@@ -735,13 +728,13 @@ ipcMain.on('generate-api-script', (event) => {
     event.reply('api-context-ready', {
         contextFile,
         apiFile,
-        triggerMsg: `请读取 ui-recorder-workspace/api-context.md，按照其中的要求生成 API 测试脚本并保存到指定文件。`
+        triggerMsg: `璇疯鍙?ui-recorder-workspace/api-context.md锛屾寜鐓у叾涓殑瑕佹眰鐢熸垚 API 娴嬭瘯鑴氭湰骞朵繚瀛樺埌鎸囧畾鏂囦欢銆俙
     });
 });
 
-// ── Replay API script ─────────────────────────────────────────────────────────
+// 鈹€鈹€ Replay API script 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('replay-api', async (event) => {
-    // 确保 session 已初始化
+    // 纭繚 session 宸插垵濮嬪寲
     if (!session.dir) {
         const workspaceRoot = path.join(__dirname, '..');
         session.dir = path.join(workspaceRoot, 'ui-recorder-workspace');
@@ -752,20 +745,19 @@ ipcMain.on('replay-api', async (event) => {
     const apiFile = path.join(session.dir, 'api-script.spec.js');
     if (!fs.existsSync(apiFile)) {
         event.reply('replay-result', { success: false, error: 'No API script found' });
-        mainWindow.webContents.send('replay-log', { type: 'fail', msg: '✗ 找不到 API 脚本文件' });
+        mainWindow.webContents.send('replay-log', { type: 'fail', msg: '鉁?鎵句笉鍒?API 鑴氭湰鏂囦欢' });
         return;
     }
 
-    // 复制到本地目录运行（避免路径空格问题）
-    const script = fs.readFileSync(apiFile, 'utf-8');
+    // 澶嶅埗鍒版湰鍦扮洰褰曡繍琛岋紙閬垮厤璺緞绌烘牸闂锛?    const script = fs.readFileSync(apiFile, 'utf-8');
     const testFile = path.join(__dirname, 'replay-api-test.spec.js');
     fs.writeFileSync(testFile, script, 'utf-8');
 
-    mainWindow.webContents.send('replay-log', { type: 'info', msg: '开始 API 回放...' });
+    mainWindow.webContents.send('replay-log', { type: 'info', msg: '寮€濮?API 鍥炴斁...' });
     mainWindow.webContents.send('replay-log', { type: 'info', msg: `Playwright CLI: ${path.join(__dirname, 'node_modules', '@playwright', 'test', 'cli.js')}` });
-    mainWindow.webContents.send('replay-log', { type: 'info', msg: `Electron 路径: ${process.execPath}` });
+    mainWindow.webContents.send('replay-log', { type: 'info', msg: `Electron 璺緞: ${process.execPath}` });
 
-    // 使用 Electron 内置的 Node.js 运行时，不依赖系统 Node.js
+    // 浣跨敤 Electron 鍐呯疆鐨?Node.js 杩愯鏃讹紝涓嶄緷璧栫郴缁?Node.js
     const playwrightCli = path.join(__dirname, 'node_modules', '@playwright', 'test', 'cli.js');
     
     replayProcess = runNodeScript(playwrightCli, [
@@ -794,21 +786,20 @@ ipcMain.on('replay-api', async (event) => {
         const success = code === 0;
         mainWindow.webContents.send('replay-result', { success, code });
         
-        // 写入回放结果文件，供 Kiro 检测
-        const resultFile = path.join(session.dir, 'api-replay-result.json');
+        // 鍐欏叆鍥炴斁缁撴灉鏂囦欢锛屼緵 Kiro 妫€娴?        const resultFile = path.join(session.dir, 'api-replay-result.json');
         fs.writeFileSync(resultFile, JSON.stringify({
             success,
             code,
             timestamp: new Date().toISOString(),
-            message: success ? 'API 脚本回放通过' : `API 脚本回放失败，退出码: ${code}`
+            message: success ? 'API 鑴氭湰鍥炴斁閫氳繃' : `API 鑴氭湰鍥炴斁澶辫触锛岄€€鍑虹爜: ${code}`
         }, null, 2), 'utf-8');
-        console.log(`[API Replay] 结果已写入: ${resultFile}`);
+        console.log(`[API Replay] 缁撴灉宸插啓鍏? ${resultFile}`);
         
         replayProcess = null;
     });
 });
 
-// ── Update API script ─────────────────────────────────────────────────────────
+// 鈹€鈹€ Update API script 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('update-api-script', (event, script) => {
     session.apiScript = script;
     const apiFile = path.join(session.dir, 'api-script.spec.js');
@@ -817,56 +808,56 @@ ipcMain.on('update-api-script', (event, script) => {
     event.reply('script-updated', {});
 });
 
-// ── Start debug: 写入调试上下文，触发 Kiro hook ──────────────────────────────
+// 鈹€鈹€ Start debug: 鍐欏叆璋冭瘯涓婁笅鏂囷紝瑙﹀彂 Kiro hook 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('start-debug', (event, { type, script, replayLog }) => {
     if (!session.dir) return;
 
-    const label = type === 'ui' ? 'UI 脚本' : 'API 脚本';
+    const label = type === 'ui' ? 'UI 鑴氭湰' : 'API 鑴氭湰';
     const filename = type === 'ui' ? 'ui-script.js' : 'api-script.spec.js';
     const scriptFile = path.join(session.dir, filename);
 
-    // 构建发给 Kiro 的上下文提示
+    // 鏋勫缓鍙戠粰 Kiro 鐨勪笂涓嬫枃鎻愮ず
     const lines = [];
-    lines.push(`# 🤖 UI Recorder - 开始${label}调试`);
+    lines.push(`# 馃 UI Recorder - 寮€濮?{label}璋冭瘯`);
     lines.push('');
-    lines.push(`**时间**: ${new Date().toLocaleString('zh-CN')}`);
-    lines.push(`**类型**: ${label}调试`);
-    lines.push(`**脚本文件**: \`${scriptFile}\``);
+    lines.push(`**鏃堕棿**: ${new Date().toLocaleString('zh-CN')}`);
+    lines.push(`**绫诲瀷**: ${label}璋冭瘯`);
+    lines.push(`**鑴氭湰鏂囦欢**: \`${scriptFile}\``);
     lines.push('');
-    lines.push('## 当前脚本');
+    lines.push('## 褰撳墠鑴氭湰');
     lines.push('```javascript');
-    lines.push(script || '// 暂无脚本');
+    lines.push(script || '// 鏆傛棤鑴氭湰');
     lines.push('```');
 
     if (replayLog && replayLog.trim()) {
         lines.push('');
-        lines.push('## 最近回放日志');
+        lines.push('## 鏈€杩戝洖鏀炬棩蹇?);
         lines.push('```');
         lines.push(replayLog.trim().substring(0, 1000));
         lines.push('```');
     }
 
     lines.push('');
-    lines.push('## 你的任务');
-    lines.push(`用户现在要调试上面的${label}。`);
-    lines.push('请等待用户告诉你需要做什么，然后：');
-    lines.push(`1. 读取 \`${scriptFile}\``);
-    lines.push('2. 根据用户需求修改脚本');
-    lines.push('3. 保存文件（工具会自动检测并更新界面）');
+    lines.push('## 浣犵殑浠诲姟');
+    lines.push(`鐢ㄦ埛鐜板湪瑕佽皟璇曚笂闈㈢殑${label}銆俙);
+    lines.push('璇风瓑寰呯敤鎴峰憡璇変綘闇€瑕佸仛浠€涔堬紝鐒跺悗锛?);
+    lines.push(`1. 璇诲彇 \`${scriptFile}\``);
+    lines.push('2. 鏍规嵁鐢ㄦ埛闇€姹備慨鏀硅剼鏈?);
+    lines.push('3. 淇濆瓨鏂囦欢锛堝伐鍏蜂細鑷姩妫€娴嬪苟鏇存柊鐣岄潰锛?);
     lines.push('');
     lines.push('---');
-    lines.push('*此文件由 UI Recorder 自动生成，Kiro 收到后请回复"收到，请告诉我需要做什么"*');
+    lines.push('*姝ゆ枃浠剁敱 UI Recorder 鑷姩鐢熸垚锛孠iro 鏀跺埌鍚庤鍥炲"鏀跺埌锛岃鍛婅瘔鎴戦渶瑕佸仛浠€涔?*');
 
     const debugFile = path.join(session.dir, 'debug-context.md');
     fs.writeFileSync(debugFile, lines.join('\n'), 'utf-8');
 
-    // touch 文件触发 Kiro hook
+    // touch 鏂囦欢瑙﹀彂 Kiro hook
     try { const now = new Date(); fs.utimesSync(debugFile, now, now); } catch(e) {}
 
-    console.log(`[Debug] 已写入调试上下文: ${type}`);
+    console.log(`[Debug] 宸插啓鍏ヨ皟璇曚笂涓嬫枃: ${type}`);
     event.reply('debug-started', { type });
 
-    // 同时监听脚本文件变化
+    // 鍚屾椂鐩戝惉鑴氭湰鏂囦欢鍙樺寲
     startWatchingScript(type, scriptFile);
 });
 let uiScriptWatcher = null;
@@ -875,10 +866,10 @@ let apiScriptWatcher = null;
 ipcMain.on('chat-request', (event, { type, message, script }) => {
     if (!session.dir) return;
 
-    // 把用户需求追加到 kiro-prompt.md
+    // 鎶婄敤鎴烽渶姹傝拷鍔犲埌 kiro-prompt.md
     const promptFile = path.join(session.dir, 'kiro-prompt.md');
     const timestamp = new Date().toLocaleString('zh-CN');
-    const section = type === 'ui' ? 'UI 脚本调试' : 'API 脚本调试';
+    const section = type === 'ui' ? 'UI 鑴氭湰璋冭瘯' : 'API 鑴氭湰璋冭瘯';
     const targetFile = type === 'ui'
         ? path.join(session.dir, 'ui-script.js')
         : path.join(session.dir, 'api-script.spec.js');
@@ -886,33 +877,31 @@ ipcMain.on('chat-request', (event, { type, message, script }) => {
     const append = [
         '',
         `---`,
-        `## 用户需求 [${timestamp}] - ${section}`,
+        `## 鐢ㄦ埛闇€姹?[${timestamp}] - ${section}`,
         '',
-        `**需求**: ${message}`,
+        `**闇€姹?*: ${message}`,
         '',
-        `**目标文件**: \`${targetFile}\``,
+        `**鐩爣鏂囦欢**: \`${targetFile}\``,
         '',
-        `**当前脚本**:`,
+        `**褰撳墠鑴氭湰**:`,
         '```javascript',
         script.substring(0, 3000),
         script.length > 3000 ? '... (truncated)' : '',
         '```',
         '',
-        `**请修改上面的目标文件，满足用户需求，然后保存。**`,
+        `**璇蜂慨鏀逛笂闈㈢殑鐩爣鏂囦欢锛屾弧瓒崇敤鎴烽渶姹傦紝鐒跺悗淇濆瓨銆?*`,
         '',
     ].join('\n');
 
     fs.appendFileSync(promptFile, append, 'utf-8');
-    console.log(`[Chat] 已写入 kiro-prompt.md: ${message.substring(0, 50)}`);
+    console.log(`[Chat] 宸插啓鍏?kiro-prompt.md: ${message.substring(0, 50)}`);
 
-    // 用 touch 触发 Kiro 的文件监听（Kiro 监听 fileEdited 事件）
-    try {
+    // 鐢?touch 瑙﹀彂 Kiro 鐨勬枃浠剁洃鍚紙Kiro 鐩戝惉 fileEdited 浜嬩欢锛?    try {
         const now = new Date();
         fs.utimesSync(promptFile, now, now);
     } catch(e) {}
 
-    // 监听目标脚本文件变化（Kiro 修改后通知前端）
-    startWatchingScript(type, targetFile);
+    // 鐩戝惉鐩爣鑴氭湰鏂囦欢鍙樺寲锛圞iro 淇敼鍚庨€氱煡鍓嶇锛?    startWatchingScript(type, targetFile);
 });
 
 let semanticFileWatcher = null;
@@ -921,17 +910,15 @@ let semanticApprovalWatcher = null;
 function startWatchingSemanticApproval(filePath) {
     if (semanticApprovalWatcher) { semanticApprovalWatcher.close(); semanticApprovalWatcher = null; }
 
-    // 用轮询检查文件是否出现（fs.watch 对不存在的文件不可靠）
-    const checkInterval = setInterval(() => {
+    // 鐢ㄨ疆璇㈡鏌ユ枃浠舵槸鍚﹀嚭鐜帮紙fs.watch 瀵逛笉瀛樺湪鐨勬枃浠朵笉鍙潬锛?    const checkInterval = setInterval(() => {
         if (fs.existsSync(filePath)) {
             clearInterval(checkInterval);
-            console.log('[Semantic] 用户已确认语义脚本，解锁下一步');
+            console.log('[Semantic] 鐢ㄦ埛宸茬‘璁よ涔夎剼鏈紝瑙ｉ攣涓嬩竴姝?);
             mainWindow.webContents.send('semantic-approved');
         }
     }, 1000);
 
-    // 60分钟后停止轮询
-    setTimeout(() => clearInterval(checkInterval), 60 * 60 * 1000);
+    // 60鍒嗛挓鍚庡仠姝㈣疆璇?    setTimeout(() => clearInterval(checkInterval), 60 * 60 * 1000);
 }
 
 let apiScriptFileWatcher = null;
@@ -955,19 +942,18 @@ function startWatchingApiScriptFile(filePath) {
             if (!content.trim()) return;
 
             session.apiScript = content;
-            console.log('[Watch] API 脚本已被 Kiro 更新');
+            console.log('[Watch] API 鑴氭湰宸茶 Kiro 鏇存柊');
             mainWindow.webContents.send('api-script-done', { apiScript: content });
         } catch(e) {}
     });
 
-    console.log('[Watch] 开始监听 API 脚本文件变化');
+    console.log('[Watch] 寮€濮嬬洃鍚?API 鑴氭湰鏂囦欢鍙樺寲');
 }
 
 function startWatchingSemanticFile(filePath) {
     if (semanticFileWatcher) { semanticFileWatcher.close(); semanticFileWatcher = null; }
 
-    // 如果文件不存在先创建空文件，让 watch 能监听
-    if (!fs.existsSync(filePath)) {
+    // 濡傛灉鏂囦欢涓嶅瓨鍦ㄥ厛鍒涘缓绌烘枃浠讹紝璁?watch 鑳界洃鍚?    if (!fs.existsSync(filePath)) {
         fs.writeFileSync(filePath, '', 'utf-8');
     }
 
@@ -983,16 +969,16 @@ function startWatchingSemanticFile(filePath) {
             if (!content.trim()) return;
 
             session.semanticScript = content;
-            console.log('[Watch] 语义脚本已被 Kiro 更新');
+            console.log('[Watch] 璇箟鑴氭湰宸茶 Kiro 鏇存柊');
             mainWindow.webContents.send('semantic-done', { semantic: content });
         } catch(e) {}
     });
 
-    console.log('[Watch] 开始监听语义脚本文件变化');
+    console.log('[Watch] 寮€濮嬬洃鍚涔夎剼鏈枃浠跺彉鍖?);
 }
 
 function startWatchingScript(type, filePath) {
-    // 停止旧的监听
+    // 鍋滄鏃х殑鐩戝惉
     if (type === 'ui' && uiScriptWatcher) { uiScriptWatcher.close(); uiScriptWatcher = null; }
     if (type === 'api' && apiScriptWatcher) { apiScriptWatcher.close(); apiScriptWatcher = null; }
 
@@ -1009,27 +995,27 @@ function startWatchingScript(type, filePath) {
 
             const newScript = fs.readFileSync(filePath, 'utf-8');
 
-            // 更新 session
+            // 鏇存柊 session
             if (type === 'ui') {
                 session.uiScript = newScript;
             } else {
                 session.apiScript = newScript;
             }
 
-            console.log(`[Watch] ${type} 脚本已被 Kiro 更新`);
+            console.log(`[Watch] ${type} 鑴氭湰宸茶 Kiro 鏇存柊`);
             mainWindow.webContents.send('script-file-changed', { type, script: newScript });
         } catch (e) {
-            console.error('[Watch] 读取文件失败:', e);
+            console.error('[Watch] 璇诲彇鏂囦欢澶辫触:', e);
         }
     });
 
     if (type === 'ui') uiScriptWatcher = watcher;
     else apiScriptWatcher = watcher;
 
-    console.log(`[Watch] 开始监听 ${type} 脚本文件变化`);
+    console.log(`[Watch] 寮€濮嬬洃鍚?${type} 鑴氭湰鏂囦欢鍙樺寲`);
 }
 
-// ── Save session with name + folder picker ────────────────────────────────────
+// 鈹€鈹€ Save session with name + folder picker 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('save-session', async (event, { name }) => {
     if (!session.dir) return;
 
@@ -1037,11 +1023,10 @@ ipcMain.on('save-session', async (event, { name }) => {
     const safeName = name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'unnamed';
     const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
 
-    // 弹出文件夹选择对话框
-    const result = await dialog.showOpenDialog(mainWindow, {
-        title: '选择保存位置',
+    // 寮瑰嚭鏂囦欢澶归€夋嫨瀵硅瘽妗?    const result = await dialog.showOpenDialog(mainWindow, {
+        title: '閫夋嫨淇濆瓨浣嶇疆',
         properties: ['openDirectory', 'createDirectory'],
-        buttonLabel: '保存到此处',
+        buttonLabel: '淇濆瓨鍒版澶?,
     });
 
     if (result.canceled || !result.filePaths[0]) {
@@ -1054,20 +1039,20 @@ ipcMain.on('save-session', async (event, { name }) => {
 
     const savedFiles = saveSessionFiles(session.dir, savedDir, safeName);
 
-    console.log(`[Save] 已保存到: ${savedDir}`);
+    console.log(`[Save] 宸蹭繚瀛樺埌: ${savedDir}`);
     event.reply('session-saved', { name: safeName, savedDir, files: savedFiles });
 });
 
-// ── Save draft（弹出文件夹选择，保存所有录制数据）────────────────────────────
+// 鈹€鈹€ Save draft锛堝脊鍑烘枃浠跺す閫夋嫨锛屼繚瀛樻墍鏈夊綍鍒舵暟鎹級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('save-draft', async (event, { step }) => {
     if (!session.dir) return;
 
     const { dialog } = require('electron');
 
     const result = await dialog.showOpenDialog(mainWindow, {
-        title: '选择保存位置',
+        title: '閫夋嫨淇濆瓨浣嶇疆',
         properties: ['openDirectory', 'createDirectory'],
-        buttonLabel: '保存到此处',
+        buttonLabel: '淇濆瓨鍒版澶?,
     });
 
     if (result.canceled || !result.filePaths[0]) {
@@ -1077,12 +1062,12 @@ ipcMain.on('save-draft', async (event, { step }) => {
 
     const destDir = result.filePaths[0];
 
-    // 保存所有录制数据：HAR + UI脚本 + 语义脚本 + API脚本
+    // 淇濆瓨鎵€鏈夊綍鍒舵暟鎹細HAR + UI鑴氭湰 + 璇箟鑴氭湰 + API鑴氭湰
     const allFiles = [
-        { src: 'ui-script.js',       label: '录制脚本' },
-        { src: 'semantic-script.md', label: '语义脚本' },
-        { src: 'api-script.spec.js', label: 'API 脚本' },
-        { src: 'network.har',        label: '网络录制 (HAR)' },
+        { src: 'ui-script.js',       label: '褰曞埗鑴氭湰' },
+        { src: 'semantic-script.md', label: '璇箟鑴氭湰' },
+        { src: 'api-script.spec.js', label: 'API 鑴氭湰' },
+        { src: 'network.har',        label: '缃戠粶褰曞埗 (HAR)' },
     ];
 
     const existingFiles = allFiles
@@ -1093,13 +1078,12 @@ ipcMain.on('save-draft', async (event, { step }) => {
         })
         .map(({ label }) => label);
 
-    // 如果目标目录已有文件，询问是否覆盖
-    if (existingFiles.length > 0) {
+    // 濡傛灉鐩爣鐩綍宸叉湁鏂囦欢锛岃闂槸鍚﹁鐩?    if (existingFiles.length > 0) {
         const confirmResult = await dialog.showMessageBox(mainWindow, {
             type: 'question',
-            title: '文件已存在',
-            message: `目标目录已存在以下文件：\n\n${existingFiles.map(f => `  • ${f}`).join('\n')}\n\n是否覆盖？`,
-            buttons: ['覆盖', '取消'],
+            title: '鏂囦欢宸插瓨鍦?,
+            message: `鐩爣鐩綍宸插瓨鍦ㄤ互涓嬫枃浠讹細\n\n${existingFiles.map(f => `  鈥?${f}`).join('\n')}\n\n鏄惁瑕嗙洊锛焋,
+            buttons: ['瑕嗙洊', '鍙栨秷'],
             defaultId: 0,
             cancelId: 1,
         });
@@ -1110,7 +1094,7 @@ ipcMain.on('save-draft', async (event, { step }) => {
         }
     }
 
-    // 执行保存
+    // 鎵ц淇濆瓨
     const savedFiles = [];
     allFiles.forEach(({ src, label }) => {
         const srcPath = path.join(session.dir, src);
@@ -1120,8 +1104,7 @@ ipcMain.on('save-draft', async (event, { step }) => {
         }
     });
 
-    // 保存草稿状态
-    const draftState = {
+    // 淇濆瓨鑽夌鐘舵€?    const draftState = {
         savedAt:  new Date().toISOString(),
         step,
         url:      session.url,
@@ -1129,7 +1112,7 @@ ipcMain.on('save-draft', async (event, { step }) => {
     };
     fs.writeFileSync(path.join(destDir, 'draft-state.json'), JSON.stringify(draftState, null, 2), 'utf-8');
 
-    console.log(`[Draft] 草稿已保存到: ${destDir}，文件: ${savedFiles.join(', ')}`);
+    console.log(`[Draft] 鑽夌宸蹭繚瀛樺埌: ${destDir}锛屾枃浠? ${savedFiles.join(', ')}`);
     event.reply('draft-saved', {
         savedAt: draftState.savedAt,
         step,
@@ -1138,14 +1121,14 @@ ipcMain.on('save-draft', async (event, { step }) => {
     });
 });
 
-// ── Open existing session ─────────────────────────────────────────────────────
+// 鈹€鈹€ Open existing session 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('open-session', async (event) => {
     const { dialog } = require('electron');
 
     const result = await dialog.showOpenDialog(mainWindow, {
-        title: '打开已有会话',
+        title: '鎵撳紑宸叉湁浼氳瘽',
         properties: ['openDirectory'],
-        buttonLabel: '打开此会话',
+        buttonLabel: '鎵撳紑姝や細璇?,
     });
 
     if (result.canceled || !result.filePaths[0]) {
@@ -1155,59 +1138,27 @@ ipcMain.on('open-session', async (event) => {
 
     const dir = result.filePaths[0];
 
-    // 读取草稿状态
-    const draftFile = path.join(dir, 'draft-state.json');
+    // 璇诲彇鑽夌鐘舵€?    const draftFile = path.join(dir, 'draft-state.json');
     let draft = null;
     if (fs.existsSync(draftFile)) {
         try { draft = JSON.parse(fs.readFileSync(draftFile, 'utf-8')); } catch(e) {}
     }
 
-    // 同步到 ui-recorder-workspace 目录
-    const workspaceRoot = path.join(__dirname, '..');
-    const workspaceDir = path.join(workspaceRoot, 'ui-recorder-workspace');
-    fs.mkdirSync(workspaceDir, { recursive: true });
-
-    // 定义需要同步的文件
-    const filesToSync = [
-        'ui-script.js',
-        'semantic-script.md',
-        'api-script.spec.js',
-        'network.har',
-        'draft-state.json',
-        'semantic-context.md',
-        'api-context.md',
-        'semantic-approved.flag'
-    ];
-
-    // 复制文件到 workspace
-    let syncedFiles = [];
-    filesToSync.forEach((fileName) => {
-        const srcPath = path.join(dir, fileName);
-        const destPath = path.join(workspaceDir, fileName);
-        if (fs.existsSync(srcPath)) {
-            fs.copyFileSync(srcPath, destPath);
-            syncedFiles.push(fileName);
-        }
-    });
-
-    console.log('[Open] 同步文件到 workspace: ' + syncedFiles.join(', '));
-
-    // 恢复 session（指向 workspace 目录）
-    session.dir = workspaceDir;
+    // 鎭㈠ session
+    session.dir = dir;
     session.url = draft?.url || '';
     session.step = draft?.step || 'record';
 
-    // 读取各脚本文件（从 workspace 目录）
-    const uiFile  = path.join(workspaceDir, 'ui-script.js');
-    const semFile = path.join(workspaceDir, 'semantic-script.md');
-    const apiFile = path.join(workspaceDir, 'api-script.spec.js');
+    // 璇诲彇鍚勮剼鏈枃浠?    const uiFile  = path.join(dir, 'ui-script.js');
+    const semFile = path.join(dir, 'semantic-script.md');
+    const apiFile = path.join(dir, 'api-script.spec.js');
 
-    if (fs.existsSync(uiFile))  session.uiScript       = fs.readFileSync(uiFile, 'utf-8');
+    if (fs.existsSync(uiFile))  session.uiScript       = fs.readFileSync(uiFile,  'utf-8');
     if (fs.existsSync(semFile)) session.semanticScript  = fs.readFileSync(semFile, 'utf-8');
     if (fs.existsSync(apiFile)) session.apiScript       = fs.readFileSync(apiFile, 'utf-8');
 
-    // 解析 HAR（从 workspace 目录）
-    const harFile = path.join(workspaceDir, 'network.har');
+    // 瑙ｆ瀽 HAR
+    const harFile = path.join(dir, 'network.har');
     if (fs.existsSync(harFile)) {
         try {
             const har = JSON.parse(fs.readFileSync(harFile, 'utf-8'));
@@ -1223,40 +1174,38 @@ ipcMain.on('open-session', async (event) => {
         } catch(e) {}
     }
 
-    console.log('[Open] 已打开会话: ' + dir + ', 步骤: ' + session.step + ', API数量: ' + session.harApis.length);
-    console.log('[Open] Session dir 已设置为: ' + session.dir);
-    
+    console.log(`[Open] 宸叉墦寮€浼氳瘽: ${dir}, 姝ラ: ${session.step}, API鏁伴噺: ${session.harApis.length}`);
+
     event.reply('session-opened', {
-        dir:               workspaceDir,
-        originalDir:       dir,
-        step:              draft?.step || 1,
-        url:               session.url,
-        uiScript:          session.uiScript,
-        semanticScript:    session.semanticScript,
-        apiScript:         session.apiScript,
-        apiCount:          session.harApis.length,
-        harApis:           session.harApis,
-        semanticApproved:  fs.existsSync(path.join(workspaceDir, 'semantic-approved.flag')),
+        dir,
+        step:             draft?.step || 1,
+        url:              session.url,
+        uiScript:         session.uiScript,
+        semanticScript:   session.semanticScript,
+        apiScript:        session.apiScript,
+        apiCount:         session.harApis.length,
+        harApis:          session.harApis,  // 鍙戦€佸畬鏁?API 鍒楄〃
+        semanticApproved: fs.existsSync(path.join(dir, 'semantic-approved.flag')),
     });
 });
 
-// ── Open folder in explorer ───────────────────────────────────────────────────
+// 鈹€鈹€ Open folder in explorer 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('open-folder', (event, { folderPath }) => {
     const { shell } = require('electron');
     shell.openPath(folderPath);
 });
 
-// ── Helper: copy session files ────────────────────────────────────────────────
+// 鈹€鈹€ Helper: copy session files 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 function saveSessionFiles(srcDir, destDir, name) {
     const savedFiles = [];
 
-    // 3 个核心脚本 + HAR
+    // 3 涓牳蹇冭剼鏈?+ HAR
     const filesToSave = [
-        { src: 'ui-script.js',       label: '录制脚本' },
-        { src: 'semantic-script.md', label: '语义脚本' },
-        { src: 'api-script.spec.js', label: 'API 脚本' },
-        { src: 'network.har',        label: '网络录制 (HAR)' },
-        { src: 'draft-state.json',   label: '草稿状态' },
+        { src: 'ui-script.js',       label: '褰曞埗鑴氭湰' },
+        { src: 'semantic-script.md', label: '璇箟鑴氭湰' },
+        { src: 'api-script.spec.js', label: 'API 鑴氭湰' },
+        { src: 'network.har',        label: '缃戠粶褰曞埗 (HAR)' },
+        { src: 'draft-state.json',   label: '鑽夌鐘舵€? },
     ];
 
     filesToSave.forEach(({ src, label }) => {
@@ -1270,20 +1219,20 @@ function saveSessionFiles(srcDir, destDir, name) {
     const readme = [
         `# ${name}`,
         '',
-        `> 保存时间：${new Date().toLocaleString('zh-CN')}`,
+        `> 淇濆瓨鏃堕棿锛?{new Date().toLocaleString('zh-CN')}`,
         '',
-        '## 核心文件',
-        '| 文件 | 说明 |',
+        '## 鏍稿績鏂囦欢',
+        '| 鏂囦欢 | 璇存槑 |',
         '|------|------|',
-        '| `ui-script.js` | Playwright UI 录制脚本 |',
-        '| `semantic-script.md` | 业务语义描述 |',
-        '| `api-script.spec.js` | API 测试脚本（可直接运行） |',
-        '| `network.har` | 录制的网络请求 |',
+        '| `ui-script.js` | Playwright UI 褰曞埗鑴氭湰 |',
+        '| `semantic-script.md` | 涓氬姟璇箟鎻忚堪 |',
+        '| `api-script.spec.js` | API 娴嬭瘯鑴氭湰锛堝彲鐩存帴杩愯锛?|',
+        '| `network.har` | 褰曞埗鐨勭綉缁滆姹?|',
         '',
-        '## 恢复会话',
-        '在 UI Recorder 中点击「打开会话」，选择此目录即可恢复。',
+        '## 鎭㈠浼氳瘽',
+        '鍦?UI Recorder 涓偣鍑汇€屾墦寮€浼氳瘽銆嶏紝閫夋嫨姝ょ洰褰曞嵆鍙仮澶嶃€?,
         '',
-        '## 运行 API 测试',
+        '## 杩愯 API 娴嬭瘯',
         '```bash',
         'npx playwright test api-script.spec.js --reporter=line',
         '```',
@@ -1298,7 +1247,7 @@ ipcMain.on('get-session', (event) => {
     event.reply('session-info', session);
 });
 
-// ── Write context file for Kiro AI ───────────────────────────────────────────
+// 鈹€鈹€ Write context file for Kiro AI 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 function writeKiroContext() {
     if (!session.dir) return;
 
@@ -1320,7 +1269,7 @@ function writeKiroContext() {
             uiSteps:     countUiSteps(session.uiScript),
             totalApis:   session.harApis.length,
             businessApis: businessApis.length,
-            apiList:     businessApis.slice(0, 20).map(a => `${a.method} ${a.url} → ${a.status}`)
+            apiList:     businessApis.slice(0, 20).map(a => `${a.method} ${a.url} 鈫?${a.status}`)
         }
     };
 
@@ -1369,7 +1318,7 @@ function buildKiroPrompt(ctx, session) {
     return lines.join('\n');
 }
 
-// ── Semantic script builder ───────────────────────────────────────────────────
+// 鈹€鈹€ Semantic script builder 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 function buildSemanticScript(uiScript, apis) {
     if (!uiScript) return '# No UI script recorded';
 
@@ -1386,24 +1335,23 @@ function buildSemanticScript(uiScript, apis) {
                !u.includes('/packages/');
     });
 
-    // ── 推断业务场景名称 ──────────────────────────────────────────────────────
+    // 鈹€鈹€ 鎺ㄦ柇涓氬姟鍦烘櫙鍚嶇О 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     const sceneName = inferSceneNameFromSteps(steps, businessApis);
 
-    // ── 生成人类可读的业务流程描述 ────────────────────────────────────────────
+    // 鈹€鈹€ 鐢熸垚浜虹被鍙鐨勪笟鍔℃祦绋嬫弿杩?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     const businessNarrative = buildBusinessNarrative(steps, businessApis);
 
-    // ── 提取关键操作（去掉噪音） ──────────────────────────────────────────────
+    // 鈹€鈹€ 鎻愬彇鍏抽敭鎿嶄綔锛堝幓鎺夊櫔闊筹級 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     const meaningfulSteps = steps.filter(s => {
-        // 过滤掉无意义的操作
-        if (s.type === 'click' && s.desc.includes('点击: ')) {
-            const label = s.desc.replace('点击: ', '');
-            // 过滤掉空 label 或纯符号
+        // 杩囨护鎺夋棤鎰忎箟鐨勬搷浣?        if (s.type === 'click' && s.desc.includes('鐐瑰嚮: ')) {
+            const label = s.desc.replace('鐐瑰嚮: ', '');
+            // 杩囨护鎺夌┖ label 鎴栫函绗﹀彿
             if (!label || label.length < 2) return false;
         }
         return true;
     });
 
-    // ── 对 API 进行分类和注释 ─────────────────────────────────────────────────
+    // 鈹€鈹€ 瀵?API 杩涜鍒嗙被鍜屾敞閲?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
     const annotatedApis = businessApis.map(a => {
         let pathname = a.url;
         try { pathname = new URL(a.url).pathname; } catch {}
@@ -1412,30 +1360,29 @@ function buildSemanticScript(uiScript, apis) {
     });
 
     const lines = [];
-    lines.push(`# 业务场景：${sceneName}`);
+    lines.push(`# 涓氬姟鍦烘櫙锛?{sceneName}`);
     lines.push('');
-    lines.push(`> 录制时间：${new Date().toLocaleString('zh-CN')}`);
-    lines.push(`> 系统地址：${(() => { try { const u = new URL(apis[0]?.url || ''); return `${u.protocol}//${u.host}`; } catch { return session?.url || ''; } })()}`);
+    lines.push(`> 褰曞埗鏃堕棿锛?{new Date().toLocaleString('zh-CN')}`);
+    lines.push(`> 绯荤粺鍦板潃锛?{(() => { try { const u = new URL(apis[0]?.url || ''); return `${u.protocol}//${u.host}`; } catch { return session?.url || ''; } })()}`);
     lines.push('');
 
-    // 业务流程描述（最重要的部分）
-    lines.push('## 业务流程描述');
+    // 涓氬姟娴佺▼鎻忚堪锛堟渶閲嶈鐨勯儴鍒嗭級
+    lines.push('## 涓氬姟娴佺▼鎻忚堪');
     lines.push('');
     lines.push(businessNarrative);
     lines.push('');
 
-    // 操作步骤
-    lines.push('## 操作步骤');
+    // 鎿嶄綔姝ラ
+    lines.push('## 鎿嶄綔姝ラ');
     lines.push('');
     meaningfulSteps.forEach((s, i) => {
         lines.push(`${i + 1}. ${s.desc}`);
     });
     lines.push('');
 
-    // 业务 API（只列关键的，过滤掉页面配置、翻译等噪音）
-    const keyApis = annotatedApis.filter(a => {
+    // 涓氬姟 API锛堝彧鍒楀叧閿殑锛岃繃婊ゆ帀椤甸潰閰嶇疆銆佺炕璇戠瓑鍣煶锛?    const keyApis = annotatedApis.filter(a => {
         const u = a.url.toLowerCase();
-        // 只保留真正的业务操作 API
+        // 鍙繚鐣欑湡姝ｇ殑涓氬姟鎿嶄綔 API
         return !u.includes('/translation') &&
                !u.includes('/front-end-config') &&
                !u.includes('/pbc/list') &&
@@ -1447,21 +1394,21 @@ function buildSemanticScript(uiScript, apis) {
     });
 
     if (keyApis.length > 0) {
-        lines.push('## 触发的业务 API');
+        lines.push('## 瑙﹀彂鐨勪笟鍔?API');
         lines.push('');
         keyApis.forEach((a, i) => {
-            lines.push(`${i + 1}. \`${a.method} ${a.pathname}\` → ${a.status}（${a.purpose}）`);
+            lines.push(`${i + 1}. \`${a.method} ${a.pathname}\` 鈫?${a.status}锛?{a.purpose}锛塦);
         });
         lines.push('');
     }
 
-    // 数据摘要
+    // 鏁版嵁鎽樿
     const inputData = steps.filter(s => s.type === 'fill' && s.value);
     if (inputData.length > 0) {
-        lines.push('## 测试数据');
+        lines.push('## 娴嬭瘯鏁版嵁');
         lines.push('');
         inputData.forEach(s => {
-            lines.push(`- ${s.fieldName || extractLabel(s.line?.match(/\.fill\((.+?),/)?.[1] || '')}：\`${s.value}\``);
+            lines.push(`- ${s.fieldName || extractLabel(s.line?.match(/\.fill\((.+?),/)?.[1] || '')}锛歕`${s.value}\``);
         });
         lines.push('');
     }
@@ -1469,73 +1416,71 @@ function buildSemanticScript(uiScript, apis) {
     return lines.join('\n');
 }
 
-// 推断 API 的业务用途
-function inferApiPurpose(api, steps) {
+// 鎺ㄦ柇 API 鐨勪笟鍔＄敤閫?function inferApiPurpose(api, steps) {
     const u = api.url.toLowerCase();
     const m = api.method;
 
-    if (u.includes('/login')) return '用户登录认证';
-    if (u.includes('/logout')) return '用户登出';
-    if (u.includes('/user/info') || u.includes('/user/profile')) return '获取用户信息';
+    if (u.includes('/login')) return '鐢ㄦ埛鐧诲綍璁よ瘉';
+    if (u.includes('/logout')) return '鐢ㄦ埛鐧诲嚭';
+    if (u.includes('/user/info') || u.includes('/user/profile')) return '鑾峰彇鐢ㄦ埛淇℃伅';
 
     if (u.includes('/form-entity-data') || u.includes('/form-entity/data')) {
-        if (m === 'POST' && u.includes('/list')) return '查询列表数据';
-        if (m === 'POST' && !u.includes('/list')) return '创建数据记录';
-        if (m === 'PUT') return '更新数据记录';
-        if (m === 'DELETE') return '删除数据记录';
-        if (m === 'GET') return '获取数据详情';
+        if (m === 'POST' && u.includes('/list')) return '鏌ヨ鍒楄〃鏁版嵁';
+        if (m === 'POST' && !u.includes('/list')) return '鍒涘缓鏁版嵁璁板綍';
+        if (m === 'PUT') return '鏇存柊鏁版嵁璁板綍';
+        if (m === 'DELETE') return '鍒犻櫎鏁版嵁璁板綍';
+        if (m === 'GET') return '鑾峰彇鏁版嵁璇︽儏';
     }
 
-    if (u.includes('/flow') && m === 'PUT') return '提交表单/流程';
-    if (u.includes('/flow') && m === 'POST') return '发起流程';
-    if (u.includes('/flow') && m === 'GET') return '获取流程信息';
+    if (u.includes('/flow') && m === 'PUT') return '鎻愪氦琛ㄥ崟/娴佺▼';
+    if (u.includes('/flow') && m === 'POST') return '鍙戣捣娴佺▼';
+    if (u.includes('/flow') && m === 'GET') return '鑾峰彇娴佺▼淇℃伅';
 
-    if (u.includes('/form-entity-page') || u.includes('/schema-id')) return '加载页面配置';
-    if (u.includes('/form-entity-layout')) return '加载表单布局';
-    if (u.includes('/form-entity') && m === 'GET') return '获取表单定义';
+    if (u.includes('/form-entity-page') || u.includes('/schema-id')) return '鍔犺浇椤甸潰閰嶇疆';
+    if (u.includes('/form-entity-layout')) return '鍔犺浇琛ㄥ崟甯冨眬';
+    if (u.includes('/form-entity') && m === 'GET') return '鑾峰彇琛ㄥ崟瀹氫箟';
 
-    if (m === 'GET') return '获取数据';
-    if (m === 'POST') return '提交数据';
-    if (m === 'PUT' || m === 'PATCH') return '更新数据';
-    if (m === 'DELETE') return '删除数据';
+    if (m === 'GET') return '鑾峰彇鏁版嵁';
+    if (m === 'POST') return '鎻愪氦鏁版嵁';
+    if (m === 'PUT' || m === 'PATCH') return '鏇存柊鏁版嵁';
+    if (m === 'DELETE') return '鍒犻櫎鏁版嵁';
 
-    return '业务操作';
+    return '涓氬姟鎿嶄綔';
 }
 
-// 生成人类可读的业务流程描述
-function buildBusinessNarrative(steps, apis) {
+// 鐢熸垚浜虹被鍙鐨勪笟鍔℃祦绋嬫弿杩?function buildBusinessNarrative(steps, apis) {
     const parts = [];
 
-    // 登录信息
+    // 鐧诲綍淇℃伅
     const loginStep = steps.find(s => s.type === 'fill' && s.line?.includes('account'));
     const loginApi = apis.find(a => a.url.toLowerCase().includes('/login'));
     if (loginApi || loginStep) {
         const account = steps.find(s => s.type === 'fill' && (s.line?.includes('#account') || s.line?.includes('account')));
         const accountVal = account?.line?.match(/\.fill\([^,]+,\s*['"`]([^'"]+)['"`]\)/)?.[1];
         if (accountVal) {
-            parts.push(`用户使用账号 **${accountVal}** 登录系统。`);
+            parts.push(`鐢ㄦ埛浣跨敤璐﹀彿 **${accountVal}** 鐧诲綍绯荤粺銆俙);
         } else {
-            parts.push('用户登录系统。');
+            parts.push('鐢ㄦ埛鐧诲綍绯荤粺銆?);
         }
     }
 
-    // 导航信息
-    const navSteps = steps.filter(s => s.type === 'navigate' || (s.type === 'click' && s.desc.includes('列表')));
+    // 瀵艰埅淇℃伅
+    const navSteps = steps.filter(s => s.type === 'navigate' || (s.type === 'click' && s.desc.includes('鍒楄〃')));
     if (navSteps.length > 0) {
-        const dest = navSteps[navSteps.length - 1].desc.replace('打开页面: ', '').replace('点击: ', '');
+        const dest = navSteps[navSteps.length - 1].desc.replace('鎵撳紑椤甸潰: ', '').replace('鐐瑰嚮: ', '');
         if (dest && !dest.includes('login')) {
-            parts.push(`进入 **${dest}** 页面。`);
+            parts.push(`杩涘叆 **${dest}** 椤甸潰銆俙);
         }
     }
 
-    // 主要业务操作
+    // 涓昏涓氬姟鎿嶄綔
     const fillSteps = steps.filter(s => s.type === 'fill');
     const submitStep = steps.find(s => s.type === 'click' && (
-        s.desc.includes('提交') || s.desc.includes('保存') || s.desc.includes('确认') ||
+        s.desc.includes('鎻愪氦') || s.desc.includes('淇濆瓨') || s.desc.includes('纭') ||
         s.desc.includes('Submit') || s.desc.includes('Save') || s.desc.includes('Confirm')
     ));
     const addStep = steps.find(s => s.type === 'click' && (
-        s.desc.includes('新增') || s.desc.includes('Add') || s.desc.includes('创建') || s.desc.includes('新建')
+        s.desc.includes('鏂板') || s.desc.includes('Add') || s.desc.includes('鍒涘缓') || s.desc.includes('鏂板缓')
     ));
 
     if (addStep && fillSteps.length > 0 && submitStep) {
@@ -1544,19 +1489,19 @@ function buildBusinessNarrative(steps, apis) {
             const label = extractLabel(s.line?.match(/\.fill\((.+?),/)?.[1] || '');
             return val ? `${label}="${val}"` : label;
         }).filter(Boolean);
-        parts.push(`点击新增按钮，填写表单信息（${fields.join('、')}），提交完成数据创建。`);
+        parts.push(`鐐瑰嚮鏂板鎸夐挳锛屽～鍐欒〃鍗曚俊鎭紙${fields.join('銆?)}锛夛紝鎻愪氦瀹屾垚鏁版嵁鍒涘缓銆俙);
     } else if (fillSteps.length > 0 && submitStep) {
         const fields = fillSteps.map(s => {
             const val = s.line?.match(/\.fill\([^,]+,\s*['"`]([^'"]+)['"`]\)/)?.[1];
             const label = extractLabel(s.line?.match(/\.fill\((.+?),/)?.[1] || '');
             return val ? `${label}="${val}"` : label;
         }).filter(Boolean);
-        parts.push(`填写表单信息（${fields.join('、')}），提交完成操作。`);
+        parts.push(`濉啓琛ㄥ崟淇℃伅锛?{fields.join('銆?)}锛夛紝鎻愪氦瀹屾垚鎿嶄綔銆俙);
     } else if (fillSteps.length > 0) {
-        parts.push(`填写了 ${fillSteps.length} 个字段的信息。`);
+        parts.push(`濉啓浜?${fillSteps.length} 涓瓧娈电殑淇℃伅銆俙);
     }
 
-    // API 结果摘要
+    // API 缁撴灉鎽樿
     const writeApis = apis.filter(a => ['POST', 'PUT', 'PATCH', 'DELETE'].includes(a.method) &&
         !a.url.toLowerCase().includes('/login') &&
         !a.url.toLowerCase().includes('/usage'));
@@ -1565,18 +1510,18 @@ function buildBusinessNarrative(steps, apis) {
     if (writeApis.length > 0) {
         const successWrite = writeApis.filter(a => a.status < 400);
         if (successWrite.length > 0) {
-            parts.push(`系统成功处理了 ${successWrite.length} 个数据写入操作。`);
+            parts.push(`绯荤粺鎴愬姛澶勭悊浜?${successWrite.length} 涓暟鎹啓鍏ユ搷浣溿€俙);
         }
     }
 
     if (failedApis.length > 0) {
-        parts.push(`⚠️ 注意：有 ${failedApis.length} 个接口返回了错误状态码（${failedApis.map(a => a.status).join('、')}）。`);
+        parts.push(`鈿狅笍 娉ㄦ剰锛氭湁 ${failedApis.length} 涓帴鍙ｈ繑鍥炰簡閿欒鐘舵€佺爜锛?{failedApis.map(a => a.status).join('銆?)}锛夈€俙);
     }
 
-    return parts.length > 0 ? parts.join('\n\n') : '业务流程已录制，请查看操作步骤和 API 列表。';
+    return parts.length > 0 ? parts.join('\n\n') : '涓氬姟娴佺▼宸插綍鍒讹紝璇锋煡鐪嬫搷浣滄楠ゅ拰 API 鍒楄〃銆?;
 }
 
-// ── API script builder ────────────────────────────────────────────────────────
+// 鈹€鈹€ API script builder 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 function buildApiScript(uiScript, semanticScript, apis) {
     const businessApis = apis.filter(a => {
         const u = a.url.toLowerCase();
@@ -1588,9 +1533,9 @@ function buildApiScript(uiScript, semanticScript, apis) {
     const sceneName = inferSceneName(steps, businessApis);
 
     const lines = [];
-    lines.push(`// API 业务流脚本 - ${sceneName}`);
-    lines.push(`// 生成时间: ${new Date().toLocaleString('zh-CN')}`);
-    lines.push(`// 基于: UI脚本 + 语义分析 + HAR 网络录制`);
+    lines.push(`// API 涓氬姟娴佽剼鏈?- ${sceneName}`);
+    lines.push(`// 鐢熸垚鏃堕棿: ${new Date().toLocaleString('zh-CN')}`);
+    lines.push(`// 鍩轰簬: UI鑴氭湰 + 璇箟鍒嗘瀽 + HAR 缃戠粶褰曞埗`);
     lines.push('');
     lines.push("const { test, expect, request } = require('@playwright/test');");
     lines.push('');
@@ -1631,16 +1576,16 @@ function buildApiScript(uiScript, semanticScript, apis) {
 
         lines.push('      headers: {');
         lines.push("        'Content-Type': 'application/json',");
-        lines.push("        // 'Authorization': `Bearer ${authToken}`,  // 如需认证");
+        lines.push("        // 'Authorization': `Bearer ${authToken}`,  // 濡傞渶璁よ瘉");
         lines.push('      }');
         lines.push('    });');
         lines.push('');
-        lines.push(`    // 验证状态码`);
+        lines.push(`    // 楠岃瘉鐘舵€佺爜`);
         lines.push(`    expect(response.status()).toBe(${api.status});`);
 
         if (api.mimeType?.includes('json')) {
             lines.push('');
-            lines.push('    // 验证响应格式');
+            lines.push('    // 楠岃瘉鍝嶅簲鏍煎紡');
             lines.push('    const body = await response.json();');
             lines.push('    expect(body).toBeDefined();');
             if (api.response) {
@@ -1648,7 +1593,7 @@ function buildApiScript(uiScript, semanticScript, apis) {
                     const resp = JSON.parse(api.response);
                     const keys = Object.keys(resp).slice(0, 3);
                     if (keys.length > 0) {
-                        lines.push(`    // 响应包含字段: ${keys.join(', ')}`);
+                        lines.push(`    // 鍝嶅簲鍖呭惈瀛楁: ${keys.join(', ')}`);
                     }
                 } catch {}
             }
@@ -1663,7 +1608,7 @@ function buildApiScript(uiScript, semanticScript, apis) {
     return lines.join('\n');
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// 鈹€鈹€ Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 function parseUiSteps(uiScript) {
     if (!uiScript) return [];
     const steps = [];
@@ -1671,19 +1616,19 @@ function parseUiSteps(uiScript) {
         const t = line.trim();
         if (t.startsWith('await page.goto(')) {
             const url = t.match(/goto\(['"`](.+?)['"`]\)/)?.[1] || '';
-            steps.push({ type: 'navigate', desc: `打开页面: ${url}`, line: t });
+            steps.push({ type: 'navigate', desc: `鎵撳紑椤甸潰: ${url}`, line: t });
         } else if (t.includes('.click(')) {
             const sel = t.match(/\.click\((.+?)\)/)?.[1] || '';
-            steps.push({ type: 'click', desc: `点击: ${extractLabel(sel)}`, line: t });
+            steps.push({ type: 'click', desc: `鐐瑰嚮: ${extractLabel(sel)}`, line: t });
         } else if (t.includes('.fill(')) {
             const m = t.match(/\.fill\((.+?),\s*['"`](.+?)['"`]\)/);
-            steps.push({ type: 'fill', desc: `输入 "${m?.[2]||''}" 到: ${extractLabel(m?.[1]||'')}`, line: t });
+            steps.push({ type: 'fill', desc: `杈撳叆 "${m?.[2]||''}" 鍒? ${extractLabel(m?.[1]||'')}`, line: t });
         } else if (t.includes('.selectOption(')) {
             const m = t.match(/\.selectOption\((.+?),\s*['"`](.+?)['"`]\)/);
-            steps.push({ type: 'select', desc: `选择 "${m?.[2]||''}": ${extractLabel(m?.[1]||'')}`, line: t });
+            steps.push({ type: 'select', desc: `閫夋嫨 "${m?.[2]||''}": ${extractLabel(m?.[1]||'')}`, line: t });
         } else if (t.includes('.press(')) {
             const key = t.match(/\.press\(.+?,\s*['"`](.+?)['"`]\)/)?.[1] || '';
-            steps.push({ type: 'press', desc: `按键: ${key}`, line: t });
+            steps.push({ type: 'press', desc: `鎸夐敭: ${key}`, line: t });
         }
     });
     return steps;
@@ -1704,57 +1649,56 @@ function extractLabel(selector) {
 }
 
 function inferSceneNameFromSteps(steps, apis) {
-    // 优先从 UI 操作推断
+    // 浼樺厛浠?UI 鎿嶄綔鎺ㄦ柇
     const hasLogin = apis.some(a => a.url.toLowerCase().includes('/login'));
-    const hasAdd = steps.some(s => s.type === 'click' && (s.desc.includes('新增') || s.desc.includes('Add') || s.desc.includes('创建')));
-    const hasSubmit = steps.some(s => s.type === 'click' && (s.desc.includes('提交') || s.desc.includes('Submit') || s.desc.includes('保存')));
-    const hasDelete = steps.some(s => s.type === 'click' && (s.desc.includes('删除') || s.desc.includes('Delete')));
-    const hasSearch = steps.some(s => s.type === 'click' && (s.desc.includes('搜索') || s.desc.includes('查询') || s.desc.includes('Search')));
+    const hasAdd = steps.some(s => s.type === 'click' && (s.desc.includes('鏂板') || s.desc.includes('Add') || s.desc.includes('鍒涘缓')));
+    const hasSubmit = steps.some(s => s.type === 'click' && (s.desc.includes('鎻愪氦') || s.desc.includes('Submit') || s.desc.includes('淇濆瓨')));
+    const hasDelete = steps.some(s => s.type === 'click' && (s.desc.includes('鍒犻櫎') || s.desc.includes('Delete')));
+    const hasSearch = steps.some(s => s.type === 'click' && (s.desc.includes('鎼滅储') || s.desc.includes('鏌ヨ') || s.desc.includes('Search')));
     const hasFill = steps.some(s => s.type === 'fill');
 
-    // 从导航推断页面名称
-    const navToPage = steps.find(s => s.type === 'click' && s.desc.includes('列表'));
-    const pageName = navToPage?.desc.replace('点击: ', '').replace('列表', '').trim();
+    // 浠庡鑸帹鏂〉闈㈠悕绉?    const navToPage = steps.find(s => s.type === 'click' && s.desc.includes('鍒楄〃'));
+    const pageName = navToPage?.desc.replace('鐐瑰嚮: ', '').replace('鍒楄〃', '').trim();
 
-    if (hasLogin && !hasAdd && !hasSubmit) return '用户登录';
-    if (hasAdd && hasSubmit && pageName) return `新增${pageName}`;
-    if (hasAdd && hasSubmit) return '新增数据';
-    if (hasDelete && pageName) return `删除${pageName}`;
-    if (hasDelete) return '删除数据';
-    if (hasSearch && pageName) return `查询${pageName}`;
-    if (hasSearch) return '数据查询';
-    if (hasFill && hasSubmit && pageName) return `编辑${pageName}`;
-    if (hasFill && hasSubmit) return '表单提交';
-    if (hasLogin) return '登录并操作';
+    if (hasLogin && !hasAdd && !hasSubmit) return '鐢ㄦ埛鐧诲綍';
+    if (hasAdd && hasSubmit && pageName) return `鏂板${pageName}`;
+    if (hasAdd && hasSubmit) return '鏂板鏁版嵁';
+    if (hasDelete && pageName) return `鍒犻櫎${pageName}`;
+    if (hasDelete) return '鍒犻櫎鏁版嵁';
+    if (hasSearch && pageName) return `鏌ヨ${pageName}`;
+    if (hasSearch) return '鏁版嵁鏌ヨ';
+    if (hasFill && hasSubmit && pageName) return `缂栬緫${pageName}`;
+    if (hasFill && hasSubmit) return '琛ㄥ崟鎻愪氦';
+    if (hasLogin) return '鐧诲綍骞舵搷浣?;
 
-    return '业务操作';
+    return '涓氬姟鎿嶄綔';
 }
 
 function inferApiTestName(api, steps) {
     const u = api.url.toLowerCase();
-    if (u.includes('/login')) return '用户登录认证';
-    if (u.includes('/logout')) return '用户登出';
-    if (u.includes('/list') || u.includes('/search')) return `查询数据列表`;
-    if (api.method === 'POST' && u.includes('/create')) return '创建数据';
-    if (api.method === 'PUT' || api.method === 'PATCH') return '更新数据';
-    if (api.method === 'DELETE') return '删除数据';
-    if (api.method === 'GET') return `获取数据`;
-    if (api.method === 'POST') return `提交数据`;
+    if (u.includes('/login')) return '鐢ㄦ埛鐧诲綍璁よ瘉';
+    if (u.includes('/logout')) return '鐢ㄦ埛鐧诲嚭';
+    if (u.includes('/list') || u.includes('/search')) return `鏌ヨ鏁版嵁鍒楄〃`;
+    if (api.method === 'POST' && u.includes('/create')) return '鍒涘缓鏁版嵁';
+    if (api.method === 'PUT' || api.method === 'PATCH') return '鏇存柊鏁版嵁';
+    if (api.method === 'DELETE') return '鍒犻櫎鏁版嵁';
+    if (api.method === 'GET') return `鑾峰彇鏁版嵁`;
+    if (api.method === 'POST') return `鎻愪氦鏁版嵁`;
     return `${api.method} ${(() => { try { return new URL(api.url).pathname.split('/').pop(); } catch { return ''; } })()}`;
 }
 
 function inferBusinessLogic(steps, apis) {
     const parts = [];
     if (steps.length > 0) {
-        parts.push(`用户通过 ${steps.length} 个操作步骤完成了业务流程。`);
+        parts.push(`鐢ㄦ埛閫氳繃 ${steps.length} 涓搷浣滄楠ゅ畬鎴愪簡涓氬姟娴佺▼銆俙);
     }
     const postApis = apis.filter(a => a.method === 'POST');
     const getApis  = apis.filter(a => a.method === 'GET');
-    if (postApis.length > 0) parts.push(`过程中提交了 ${postApis.length} 个写操作请求。`);
-    if (getApis.length > 0)  parts.push(`读取了 ${getApis.length} 个数据接口。`);
+    if (postApis.length > 0) parts.push(`杩囩▼涓彁浜や簡 ${postApis.length} 涓啓鎿嶄綔璇锋眰銆俙);
+    if (getApis.length > 0)  parts.push(`璇诲彇浜?${getApis.length} 涓暟鎹帴鍙ｃ€俙);
     const failedApis = apis.filter(a => a.status >= 400);
-    if (failedApis.length > 0) parts.push(`注意: 有 ${failedApis.length} 个接口返回了错误状态码。`);
-    return parts.join(' ') || '业务流程已记录。';
+    if (failedApis.length > 0) parts.push(`娉ㄦ剰: 鏈?${failedApis.length} 涓帴鍙ｈ繑鍥炰簡閿欒鐘舵€佺爜銆俙);
+    return parts.join(' ') || '涓氬姟娴佺▼宸茶褰曘€?;
 }
 
 function countUiSteps(uiScript) {
@@ -1762,16 +1706,16 @@ function countUiSteps(uiScript) {
     return (uiScript.match(/await page\./g) || []).length;
 }
 
-// ── Save session files ─────────────────────────────────────────────────────────
+// 鈹€鈹€ Save session files 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 function saveSessionFiles(srcDir, destDir, name) {
     const savedFiles = [];
     
-    // 核心脚本文件
+    // 鏍稿績鑴氭湰鏂囦欢
     const coreFiles = [
-        { src: 'ui-script.js',         label: 'UI 脚本' },
-        { src: 'semantic-script.md',   label: '语义脚本' },
-        { src: 'api-script.spec.js',   label: 'API 脚本' },
-        { src: 'network.har',          label: '网络录制' },
+        { src: 'ui-script.js',         label: 'UI 鑴氭湰' },
+        { src: 'semantic-script.md',   label: '璇箟鑴氭湰' },
+        { src: 'api-script.spec.js',   label: 'API 鑴氭湰' },
+        { src: 'network.har',          label: '缃戠粶褰曞埗' },
     ];
     
     coreFiles.forEach(({ src, label }) => {
@@ -1782,8 +1726,7 @@ function saveSessionFiles(srcDir, destDir, name) {
         }
     });
     
-    // 保存会话状态
-    const sessionState = {
+    // 淇濆瓨浼氳瘽鐘舵€?    const sessionState = {
         savedAt: new Date().toISOString(),
         name: name,
         url: session.url,
@@ -1791,12 +1734,12 @@ function saveSessionFiles(srcDir, destDir, name) {
         semanticApproved: fs.existsSync(path.join(srcDir, 'semantic-approved.flag')),
     };
     fs.writeFileSync(path.join(destDir, 'session-state.json'), JSON.stringify(sessionState, null, 2), 'utf-8');
-    savedFiles.push('会话状态');
+    savedFiles.push('浼氳瘽鐘舵€?);
     
     return savedFiles;
 }
 
-// ── Write Kiro context ──────────────────────────────────────────────────────────
+// 鈹€鈹€ Write Kiro context 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 function writeKiroContext() {
     if (!session.dir) return;
     
@@ -1832,7 +1775,7 @@ function writeKiroContext() {
     fs.writeFileSync(path.join(session.dir, 'kiro-prompt.md'), prompt, 'utf-8');
 }
 
-// ── Save Semantic Script ─────────────────────────────────────────────────────
+// 鈹€鈹€ Save Semantic Script 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('save-semantic-script', (event, data) => {
     if (!session || !session.dir) {
         console.error('[Semantic] No active session');
@@ -1854,7 +1797,7 @@ ipcMain.on('save-semantic-script', (event, data) => {
     });
 });
 
-// ── Check Semantic Script Status ──────────────────────────────────────────────
+// 鈹€鈹€ Check Semantic Script Status 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 ipcMain.on('check-semantic-script', (event) => {
     if (!session || !session.dir) {
         event.reply('semantic-script-status', { exists: false });

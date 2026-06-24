@@ -1,11 +1,3 @@
-# 🤖 UI Recorder - 开始API 脚本调试
-
-**时间**: 2026/5/25 10:21:15
-**类型**: API 脚本调试
-**脚本文件**: `C:\Users\jianz\OneDrive - 知微行易（上海）智能科技有限公司\桌面\CETATest\ceta-skills-windows-amd64-2.0.27\ceta-ai-skills-windows-amd64\ceta-ai-skills\ui-recorder-workspace\api-script.spec.js`
-
-## 当前脚本
-```javascript
 const { test, expect, request } = require('@playwright/test');
 
 const BASE_URL = 'http://localhost:9220';
@@ -44,7 +36,7 @@ test.describe.serial('新增学生完整信息（含专业、可编辑表格）'
 
   // ── 1. 用户登录 ────────────────────────────────────────────────────────────
   test('1. 用户登录认证', async () => {
-    const res = await apiContext.post('/user-management/api/user/login', {
+    const res = await apiContext.post('/user-management/api/user/login', {      
       data: {
         email:    TEST_DATA.email,
         username: TEST_DATA.email,
@@ -76,7 +68,7 @@ test.describe.serial('新增学生完整信息（含专业、可编辑表格）'
     console.log(`✓ 用户: ${body.username} (id: ${body.id})`);
   });
 
-  // ── 3. 查询学生列表（记录提交前数量）─────────────────────────────────────
+  // ── 3. 查询学生列表（记录提交前数量）─────────────────────────────────────  
   test('3. 查询学生列表（记录提交前数量）', async () => {
     const res = await apiContext.post('/form/api/v3/form-entity-data/basetest/base-test-form/list', {
       headers: { Authorization: `Bearer ${authToken}` },
@@ -92,7 +84,7 @@ test.describe.serial('新增学生完整信息（含专业、可编辑表格）'
     console.log(`✓ 提交前学生列表共 ${countBefore} 条记录`);
   });
 
-  // ── 4. 提交新增学生记录（通过流程）────────────────────────────────────────
+  // ── 4. 提交新增学生记录（通过流程）──────────────────────────────────────── 
   test('4. 新增学生完整信息（通过流程提交）', async () => {
     const res = await apiContext.put(
       '/flow/api/v2/flow-definition/basetest/number-picker-flow/base-test-form/default/update-form?formPbcToken=basetest',
@@ -121,7 +113,7 @@ test.describe.serial('新增学生完整信息（含专业、可编辑表格）'
     console.log(`✓ 学生记录创建成功，formEntityDataId: ${body.formEntityDataId}`);
   });
 
-  // ── 5. 验证新记录出现在列表中，且数量+1 ──────────────────────────────────
+  // ── 5. 验证新记录出现在列表中，且数量+1 ──────────────────────────────────  
   test('5. 验证新增记录出现在列表中（数量+1）', async () => {
     const res = await apiContext.post('/form/api/v3/form-entity-data/basetest/base-test-form/list', {
       headers: { Authorization: `Bearer ${authToken}` },
@@ -144,15 +136,3 @@ test.describe.serial('新增学生完整信息（含专业、可编辑表格）'
     console.log(`✓ 新增记录已出现在列表中: studentName=${created.studentName}, count: ${countBefore} → ${body.count}`);
   });
 });
-
-```
-
-## 你的任务
-用户现在要调试上面的API 脚本。
-请等待用户告诉你需要做什么，然后：
-1. 读取 `C:\Users\jianz\OneDrive - 知微行易（上海）智能科技有限公司\桌面\CETATest\ceta-skills-windows-amd64-2.0.27\ceta-ai-skills-windows-amd64\ceta-ai-skills\ui-recorder-workspace\api-script.spec.js`
-2. 根据用户需求修改脚本
-3. 保存文件（工具会自动检测并更新界面）
-
----
-*此文件由 UI Recorder 自动生成，Kiro 收到后请回复"收到，请告诉我需要做什么"*
