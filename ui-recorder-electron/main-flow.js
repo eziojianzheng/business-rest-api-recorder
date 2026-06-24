@@ -1179,6 +1179,16 @@ ipcMain.on('open-session', async (event) => {
         'semantic-approved.flag'
     ];
 
+    // 先删除 workspace 中存在但源目录不存在的文件（清理旧数据）
+    filesToSync.forEach((fileName) => {
+        const srcPath = path.join(dir, fileName);
+        const destPath = path.join(workspaceDir, fileName);
+        if (!fs.existsSync(srcPath) && fs.existsSync(destPath)) {
+            fs.unlinkSync(destPath);
+            console.log('[Open] 删除旧文件: ' + fileName);
+        }
+    });
+
     // 复制文件到 workspace
     let syncedFiles = [];
     filesToSync.forEach((fileName) => {
