@@ -364,8 +364,25 @@ ipcMain.on('start-recording', async (event, url) => {
     const outputFile = path.join(session.dir, 'ui-script.js');
     const harFile    = path.join(session.dir, 'network.har');
 
-    if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
-    if (fs.existsSync(harFile))    fs.unlinkSync(harFile);
+    // 开始新录制时，清空所有之前的脚本文件
+    const filesToClean = [
+        'ui-script.js',
+        'network.har',
+        'semantic-script.md',
+        'api-script.spec.js',
+        'semantic-context.md',
+        'api-context.md',
+        'semantic-approved.flag',
+        'draft-state.json'
+    ];
+    
+    filesToClean.forEach((fileName) => {
+        const filePath = path.join(session.dir, fileName);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log('[Record] 清理旧文件: ' + fileName);
+        }
+    });
 
     // 使用 Electron 内置的 Node.js 运行时，不依赖系统 Node.js
     // playwright-core/cli.js 是 Playwright 的 CLI 入口
