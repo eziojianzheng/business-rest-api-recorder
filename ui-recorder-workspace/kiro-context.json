@@ -1,0 +1,26 @@
+{
+  "sessionId": "session-auto-1782285132893",
+  "url": "https://bot.ceta.crm.duxing.cn/ui/login/",
+  "step": "record",
+  "uiScriptFile": "C:\\Users\\ADMIN\\Desktop\\ceta-skills-windows-amd64-2.0.27\\ceta-skills-windows-amd64-2.0.27\\ceta-ai-skills-windows-amd64\\ceta-ai-skills\\ui-recorder-workspace\\ui-script.js",
+  "harFile": "C:\\Users\\ADMIN\\Desktop\\ceta-skills-windows-amd64-2.0.27\\ceta-skills-windows-amd64-2.0.27\\ceta-ai-skills-windows-amd64\\ceta-ai-skills\\ui-recorder-workspace\\network.har",
+  "semanticFile": "C:\\Users\\ADMIN\\Desktop\\ceta-skills-windows-amd64-2.0.27\\ceta-skills-windows-amd64-2.0.27\\ceta-ai-skills-windows-amd64\\ceta-ai-skills\\ui-recorder-workspace\\semantic-script.md",
+  "apiScriptFile": "C:\\Users\\ADMIN\\Desktop\\ceta-skills-windows-amd64-2.0.27\\ceta-skills-windows-amd64-2.0.27\\ceta-ai-skills-windows-amd64\\ceta-ai-skills\\ui-recorder-workspace\\api-script.spec.js",
+  "summary": {
+    "uiSteps": 2,
+    "totalApis": 41,
+    "businessApis": 19,
+    "apiList": [
+      "GET /ui/login/",
+      "GET /ui/bot-config.js",
+      "GET /ui/js/main.a88ee666-33f2-4bd7-af60-8bd72c85da4a.bundle.js",
+      "GET /ui/css/main.a88ee666-33f2-4bd7-af60-8bd72c85da4a.bundle.css",
+      "GET /ui/packages/ag-grid@33.3.2/ag-grid.a88ee666-33f2-4bd7-af60-8bd72c85da4a.bundle.js",
+      "GET /ui/js/aiAgentV2.a88ee666-33f2-4bd7-af60-8bd72c85da4a.chunk.js",
+      "GET /ui/js/aiAgent.a88ee666-33f2-4bd7-af60-8bd72c85da4a.chunk.js",
+      "GET /ui/packages/reactflow@11.8.3/reactflow.a88ee666-33f2-4bd7-af60-8bd72c85da4a.bundle.js",
+      "GET /ui/packages/@wangeditor@5.0.1/@wangeditor.a88ee666-33f2-4bd7-af60-8bd72c85da4a.bundle.js",
+      "GET /ui/js/markdown.a88ee666-33f2-4bd7-af60-8bd72c85da4a.chunk.js"
+    ]
+  }
+}
