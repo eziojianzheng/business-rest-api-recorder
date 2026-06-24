@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test results (keep structure, ignore content)
+ui-recorder-electron/test-results/*.xml
+ui-recorder-electron/test-results/*.zip
+
+# Temporary files
+*.tmp
+*.temp
+
+# Kiro workspace temp files
+ui-recorder-workspace/*.har
+ui-recorder-workspace/network.har
+
+# Excel files (user data)
+*.xlsx

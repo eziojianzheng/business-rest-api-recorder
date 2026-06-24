@@ -1,0 +1,1163 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Test Recorder</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1e1e1e; color: #d4d4d4; font-family: 'Segoe UI', sans-serif; font-size: 13px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── Progress Bar ── */
+  #progress-bar { background: #252526; border-bottom: 1px solid #3c3c3c; padding: 14px 24px; display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+  .step-item { display: flex; align-items: center; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; }
+  .step-item:hover { background: rgba(255,255,255,0.05); }
+  .step-item.navigable .step-circle { cursor: pointer; }
+  .step-item.navigable:hover .step-circle { transform: scale(1.1); }
+  .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: bold; border: 2px solid #555; background: #2d2d2d; color: #888; transition: all 0.3s; flex-shrink: 0; }
+  .step-label { margin-left: 8px; font-size: 12px; color: #888; white-space: nowrap; transition: color 0.3s; }
+  .step-connector { flex: 1; height: 2px; background: #3c3c3c; min-width: 30px; max-width: 80px; margin: 0 8px; transition: background 0.3s; }
+  .step-item.active .step-circle { border-color: #007acc; background: #007acc; color: #fff; }
+  .step-item.active .step-label { color: #4fc3f7; font-weight: 600; }
+  .step-item.done .step-circle { border-color: #0e7a0d; background: #0e7a0d; color: #fff; }
+  .step-item.done .step-label { color: #4caf50; }
+  .step-connector.done { background: #0e7a0d; }
+
+  /* ── Main Content ── */
+  #main-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .step-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; padding: 16px; gap: 12px; }
+  .step-panel.active { display: flex; }
+
+  /* ── Info Banner ── */
+  .info-banner { background: #1a3a5c; border: 1px solid #007acc; border-radius: 4px; padding: 8px 14px; font-size: 12px; color: #9cdcfe; flex-shrink: 0; }
+  .info-banner span { margin-right: 6px; }
+
+  /* ── Controls Row ── */
+  .controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+  .url-input { flex: 1; min-width: 200px; background: #3c3c3c; border: 1px solid #555; border-radius: 4px; color: #d4d4d4; padding: 7px 10px; font-size: 13px; outline: none; }
+  .url-input:focus { border-color: #007acc; }
+
+  /* ── Buttons ── */
+  button { padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: opacity 0.2s, background 0.2s; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-green  { background: #0e7a0d; color: #fff; }
+  .btn-green:hover:not(:disabled)  { background: #12a010; }
+  .btn-red    { background: #c0392b; color: #fff; }
+  .btn-red:hover:not(:disabled)    { background: #e74c3c; }
+  .btn-blue   { background: #007acc; color: #fff; }
+  .btn-blue:hover:not(:disabled)   { background: #0098ff; }
+  .btn-gray   { background: #3c3c3c; color: #d4d4d4; border: 1px solid #555; }
+  .btn-gray:hover:not(:disabled)   { background: #4a4a4a; }
+  .btn-teal   { background: #00796b; color: #fff; }
+  .btn-teal:hover:not(:disabled)   { background: #009688; }
+  .btn-next   { background: #1a5c2a; color: #4caf50; border: 1px solid #4caf50; }
+  .btn-next:hover:not(:disabled)   { background: #2a7a3a; }
+
+  /* ── Two-column layout ── */
+  .two-col { display: flex; gap: 12px; flex: 1; overflow: hidden; min-height: 0; }
+  .panel-left, .panel-right { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .panel-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; flex-shrink: 0; }
+
+  /* ── Code / Text areas ── */
+  textarea.code-area { flex: 1; background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px; color: #d4d4d4; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; padding: 10px; resize: none; outline: none; line-height: 1.5; }
+  textarea.code-area:focus { border-color: #007acc; }
+
+  /* ── Log console ── */
+  .log-console { flex: 1; background: #0d0d0d; border: 1px solid #3c3c3c; border-radius: 4px; overflow-y: auto; padding: 10px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.6; }
+  .log-line { margin-bottom: 2px; word-break: break-all; }
+  .log-line.stdout { color: #d4d4d4; }
+  .log-line.stderr { color: #f48771; }
+  .log-line.info   { color: #9cdcfe; }
+  .log-line.success { color: #4caf50; font-weight: bold; }
+  .log-line.fail    { color: #f44336; font-weight: bold; }
+
+  /* ── API list ── */
+  .api-list { flex: 1; overflow-y: auto; background: #252526; border: 1px solid #3c3c3c; border-radius: 4px; }
+  .api-item { padding: 6px 10px; border-bottom: 1px solid #2d2d2d; display: flex; align-items: center; gap: 8px; font-size: 11px; }
+  .api-item:hover { background: #2a2d2e; }
+  .api-method { font-weight: bold; min-width: 42px; font-size: 10px; padding: 2px 5px; border-radius: 3px; text-align: center; }
+  .method-GET    { background: #1a4a1a; color: #4caf50; }
+  .method-POST   { background: #1a3a5c; color: #4fc3f7; }
+  .method-PUT    { background: #3a2a00; color: #ffa726; }
+  .method-PATCH  { background: #2a1a3a; color: #ce93d8; }
+  .method-DELETE { background: #3a1a1a; color: #ef5350; }
+  .api-url { flex: 1; color: #9cdcfe; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .api-status { font-size: 10px; padding: 1px 5px; border-radius: 3px; }
+  .status-2xx { background: #1a3a1a; color: #4caf50; }
+  .status-3xx { background: #3a3a1a; color: #ffd54f; }
+  .status-4xx, .status-5xx { background: #3a1a1a; color: #ef5350; }
+
+  /* ── Semantic / single panel ── */
+  .single-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .markdown-preview { flex: 1; background: #252526; border: 1px solid #3c3c3c; border-radius: 4px; overflow-y: auto; padding: 16px; font-size: 13px; line-height: 1.7; }
+  .markdown-preview h1 { color: #4fc3f7; font-size: 16px; margin-bottom: 10px; }
+  .markdown-preview h2 { color: #9cdcfe; font-size: 14px; margin: 14px 0 6px; border-bottom: 1px solid #3c3c3c; padding-bottom: 4px; }
+  .markdown-preview p  { color: #d4d4d4; margin-bottom: 8px; }
+  .markdown-preview li { color: #d4d4d4; margin-left: 20px; margin-bottom: 3px; }
+  .markdown-preview code { background: #1e1e1e; color: #ce9178; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 11px; }
+  .markdown-preview blockquote { border-left: 3px solid #007acc; padding-left: 10px; color: #888; margin: 8px 0; }
+
+  /* ── Result badge ── */
+  .result-badge { padding: 6px 14px; border-radius: 4px; font-size: 12px; font-weight: bold; display: none; }
+  .result-badge.success { background: #1a3a1a; color: #4caf50; border: 1px solid #4caf50; display: inline-block; }
+  .result-badge.fail    { background: #3a1a1a; color: #ef5350; border: 1px solid #ef5350; display: inline-block; }
+
+  /* ── Empty state ── */
+  .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #555; font-size: 13px; }
+
+  /* ── Session info ── */
+  .session-info { font-size: 11px; color: #555; }
+</style>
+</head>
+<body>
+
+<!-- ── Progress Bar ── -->
+<div id="progress-bar">
+  <div class="step-item active navigable" id="step-item-0" onclick="navigateToStep(0)" title="点击跳转到导入配置">
+    <div class="step-circle" id="step-circle-0">0</div>
+    <div class="step-label">导入配置</div>
+  </div>
+  <div class="step-connector" id="conn-0"></div>
+  <div class="step-item navigable" id="step-item-1" onclick="navigateToStep(1)" title="点击跳转到录制">
+    <div class="step-circle" id="step-circle-1">1</div>
+    <div class="step-label">录制</div>
+  </div>
+  <div class="step-connector" id="conn-1"></div>
+  <div class="step-item navigable" id="step-item-2" onclick="navigateToStep(2)" title="点击跳转到语义">
+    <div class="step-circle" id="step-circle-2">2</div>
+    <div class="step-label">语义</div>
+  </div>
+  <div class="step-connector" id="conn-2"></div>
+  <div class="step-item navigable" id="step-item-3" onclick="navigateToStep(3)" title="点击跳转到API调试">
+    <div class="step-circle" id="step-circle-3">3</div>
+    <div class="step-label">API调试</div>
+  </div>
+  <div style="flex:1"></div>
+  <!-- 顶部操作按钮 -->
+  <button onclick="openSession()" style="background:#3c3c3c;color:#d4d4d4;border:1px solid #555;border-radius:4px;padding:5px 12px;font-size:11px;cursor:pointer;margin-right:8px;">
+    📂 打开会话
+  </button>
+  <button id="btn-save-draft" onclick="saveDraft()" style="background:#3c3c3c;color:#d4d4d4;border:1px solid #555;border-radius:4px;padding:5px 12px;font-size:11px;cursor:pointer;margin-right:8px;">
+    💾 保存
+  </button>
+  <span id="draft-status" style="font-size:10px;color:#555;margin-right:12px;"></span>
+  <span class="session-info" id="session-info">未开始</span>
+</div>
+
+<!-- ── Main Content ── -->
+<div id="main-content">
+
+  <!-- ══ Step 0: 导入配置 ══ -->
+  <div class="step-panel active" id="panel-0">
+    <div class="info-banner">
+      <span>ℹ️</span>上传 CETA Seed Data JSON 文件，可生成完整的 API 文档或直接开始录制测试
+    </div>
+    <div class="controls">
+      <input type="file" id="seed-data-file" accept=".json" style="display:none;" onchange="handleSeedDataUpload(event)">
+      <button class="btn-blue" onclick="document.getElementById('seed-data-file').click()">📁 选择 Seed Data 文件</button>
+      <button class="btn-teal" id="btn-generate-api-doc" onclick="generateApiDoc()" disabled>📖 生成 API 文档</button>
+      <span id="seed-data-status" style="font-size:12px;color:#888;"></span>
+    </div>
+    <div class="single-panel">
+      <div class="panel-title">📋 Seed Data 信息 / API 文档</div>
+      <div class="markdown-preview" id="seed-data-preview">
+        <div class="empty-state">
+          <div style="text-align:center;padding:40px;">
+            <div style="font-size:48px;margin-bottom:16px;">📦</div>
+            <div style="font-size:14px;color:#9cdcfe;margin-bottom:8px;">上传 CETA Seed Data JSON</div>
+            <div style="font-size:12px;color:#666;line-height:1.6;">
+              <strong>两种使用方式：</strong><br><br>
+              <strong>1. 生成 API 文档</strong><br>
+              上传 Seed Data 后点击"生成 API 文档"，AI 会分析项目结构并生成完整的 API 使用文档<br>
+              包括：请求参数来源、字段依赖关系、业务逻辑说明<br><br>
+              <strong>2. 录制测试脚本</strong><br>
+              上传 Seed Data 后直接开始录制，生成语义脚本时会结合项目结构提供更准确的描述<br><br>
+              <span style="color:#888;">如果没有 Seed Data，可以直接跳过此步骤开始录制</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="controls" style="justify-content:space-between;">
+      <button class="btn-gray" onclick="goToStep(1)">⏭ 跳过，直接录制</button>
+      <button class="btn-next" id="btn-to-step1" onclick="goToStep(1)" disabled>✓ 开始录制测试 →</button>
+    </div>
+  </div>
+
+  <!-- ══ Step 1: 录制 ══ -->
+  <div class="step-panel" id="panel-1">
+    <div class="info-banner">
+      <span>ℹ️</span>使用 Playwright Inspector 录制操作，完成后关闭 Inspector 窗口即可自动保存脚本和 API
+    </div>
+    <div class="controls">
+      <span style="color:#888;font-size:12px;white-space:nowrap;">目标 URL：</span>
+      <input type="text" class="url-input" id="url-input"
+             placeholder="https://example.com"
+             value="http://localhost:9220/ui/login/basic?auth=basic">
+      <button class="btn-green" id="btn-start-record" onclick="startRecording()">▶ 开始录制</button>
+      <button class="btn-red" id="btn-stop-record" onclick="stopRecording()" disabled>⏹ 停止录制</button>
+      <span id="record-status" style="font-size:12px;color:#888;"></span>
+    </div>
+    <div class="two-col">
+      <div class="panel-left">
+        <div class="panel-title">🌐 网络 API (<span id="api-count">0</span>)</div>
+        <div class="api-list" id="api-list">
+          <div class="empty-state">录制后显示捕获的 API 请求</div>
+        </div>
+      </div>
+      <div class="panel-right">
+        <div class="panel-title">📝 UI 脚本（实时同步）</div>
+        <textarea class="code-area" id="ui-script-preview" readonly
+                  placeholder="录制时脚本将实时显示在这里...&#10;&#10;操作步骤：&#10;1. 输入目标 URL&#10;2. 点击「开始录制」&#10;3. 在 Playwright Inspector 中操作&#10;4. 关闭 Inspector 窗口完成录制"></textarea>
+      </div>
+    </div>
+    <div class="controls" style="justify-content:flex-end;">
+      <button class="btn-next" id="btn-to-step2" onclick="goToStep(2)" disabled>✓ 录制完成，进入语义分析 →</button>
+    </div>
+  </div>
+
+  <!-- ══ Step 2: 语义 ══ -->
+  <div class="step-panel" id="panel-2">
+    <div class="info-banner">
+      <span>ℹ️</span>脚本已录制完成，点击「生成语义脚本」分析业务场景，或直接在下方编辑器中修改
+    </div>
+    <div class="controls">
+      <button class="btn-blue" onclick="generateSemantic()">🧠 生成语义脚本</button>
+      <button class="btn-green" id="btn-save-semantic" onclick="saveSemanticScript()" disabled>💾 保存修改</button>
+      <span id="semantic-status" style="font-size:12px;color:#888;"></span>
+    </div>
+    <div class="two-col">
+      <div class="panel-left">
+        <div class="panel-title">📄 语义脚本（可编辑）</div>
+        <textarea class="code-area" id="semantic-script-edit"
+                  placeholder="点击"生成语义脚本"按钮，或直接在此编写..."
+                  oninput="onSemanticScriptEdit()"></textarea>
+      </div>
+      <div class="panel-right">
+        <div class="panel-title">👁 实时预览</div>
+        <div class="markdown-preview" id="semantic-preview">
+          <div class="empty-state">编辑左侧脚本，预览将实时更新</div>
+        </div>
+      </div>
+    </div>
+    <div class="controls" style="justify-content:flex-end;">
+      <button class="btn-next" id="btn-to-step3" onclick="goToStep(3)">✓ 进入 API 调试 →</button>
+    </div>
+  </div>
+
+  <!-- ══ Step 3: API调试 ══ -->
+  <div class="step-panel" id="panel-3">
+    <div class="controls">
+      <button class="btn-blue" onclick="generateApiScript()">⚡ 生成 API 脚本</button>
+      <span id="api-gen-status" style="font-size:12px;color:#888;"></span>
+    </div>
+    <div class="single-panel" style="max-height:160px;min-height:0;flex-shrink:0;">
+      <div class="panel-title">🔧 API 测试脚本预览</div>
+      <textarea class="code-area" id="api-script-preview" readonly placeholder="点击"生成 API 脚本"按钮..."></textarea>
+    </div>
+    <div class="info-banner" style="flex-shrink:0;">
+      <span>💡</span>API 脚本已同步到 <code>ui-recorder-workspace/api-script.spec.js</code>，点击「开始调试」告诉 Kiro 当前上下文，然后在 Kiro 聊天框说你想验证什么
+    </div>
+    <div class="controls" style="flex-shrink:0;">
+      <button class="btn-blue" id="btn-replay-api" onclick="replayApi()" disabled>▶ 回放 API</button>
+      <button class="btn-red" id="btn-stop-replay-api" onclick="stopReplay()" disabled>⏹ 停止</button>
+      <span id="replay-api-status" class="result-badge"></span>
+      <div id="kiro-api-sync-badge" style="display:none;padding:4px 10px;background:#1a3a1a;border:1px solid #4caf50;border-radius:4px;font-size:11px;color:#4caf50;">
+        ✓ Kiro 已更新脚本
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="panel-left">
+        <div class="panel-title">
+          🔧 API 脚本
+          <span style="font-size:10px;color:#555;font-weight:normal;margin-left:8px;">ui-recorder-workspace/api-script.spec.js</span>
+        </div>
+        <textarea class="code-area" id="api-script-edit"
+                  placeholder="API 脚本将显示在这里，可直接编辑..."
+                  oninput="onApiScriptEdit()"></textarea>
+      </div>
+      <div class="panel-right" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
+          <div class="panel-title">🖥 回放日志</div>
+          <div class="log-console" id="replay-api-log"></div>
+        </div>
+        <div style="background:#1a2a3a;border:1px solid #007acc;border-radius:4px;padding:12px;flex-shrink:0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-size:12px;color:#4fc3f7;font-weight:600;">💬 在 Kiro 聊天框里说：</div>
+            <button id="btn-start-debug-api" onclick="startDebug('api')" style="
+              background:linear-gradient(135deg,#6f42c1,#007acc);
+              color:white;border:none;border-radius:4px;
+              padding:6px 14px;font-size:11px;font-weight:600;
+              cursor:pointer;display:flex;align-items:center;gap:6px;
+              box-shadow:0 0 10px rgba(111,66,193,0.5);white-space:nowrap;
+            ">
+              <span>🤖</span><span>开始调试</span>
+            </button>
+          </div>
+          <div style="font-size:11px;color:#888;line-height:1.9;">
+            <div>• <span style="color:#d4d4d4;">"验证登录接口返回的 token 不为空"</span></div>
+            <div>• <span style="color:#d4d4d4;">"帮我把认证 token 从登录接口传给后续请求"</span></div>
+            <div>• <span style="color:#d4d4d4;">"接口返回 500，帮我看看 api-script.spec.js"</span></div>
+            <div>• <span style="color:#d4d4d4;">"给所有 POST 接口加上响应体断言"</span></div>
+          </div>
+          <div id="debug-api-status" style="display:none;margin-top:8px;padding:6px 10px;background:#0d1a0d;border:1px solid #4caf50;border-radius:3px;font-size:11px;color:#4caf50;">
+            ✓ 已复制到剪贴板！切换到 <b>Kiro 聊天框</b>，<b>Ctrl+V</b> 粘贴发送即可
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:#555;border-top:1px solid #2a3a4a;padding-top:8px;">
+            Kiro 修改并保存 <code style="color:#666;">ui-recorder-workspace/api-script.spec.js</code> 后，左边脚本自动更新
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="controls" style="justify-content:flex-end;">
+      <button class="btn-next" id="btn-finish" onclick="finish()" disabled>✓ 调试完成 🎉</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentStep = 0;  // 从 0 开始
+let sessionCreated = false;
+let recordingActive = false;
+let replayActive = false;
+let lastReplaySuccess = false;
+let uiScriptDirty = false;
+let apiScriptDirty = false;
+let seedDataUploaded = false;
+let maxReachedStep = 0;  // 记录用户到达过的最大步骤
+
+// ── Step Navigation ───────────────────────────────────────────────────────────
+function navigateToStep(n) {
+  // 允许跳转到已经到达过的步骤，或者下一步（如果是线性的）
+  if (n > maxReachedStep && n > currentStep + 1) {
+    // 还未到达过，且不是下一步，提示用户
+    const stepNames = ['导入配置', '录制', '语义', 'API调试'];
+    alert(`请先完成前面的步骤。\n\n当前：${stepNames[currentStep]}\n目标：${stepNames[n]}`);
+    return;
+  }
+  goToStep(n);
+}
+
+function goToStep(n) {
+  // 更新最大到达步骤
+  if (n > maxReachedStep) {
+    maxReachedStep = n;
+  }
+
+  // Mark previous steps as done
+  for (let i = 0; i < n; i++) {
+    document.getElementById(`step-item-${i}`).className = 'step-item done navigable';
+    document.getElementById(`step-circle-${i}`).textContent = '✓';
+    if (i < 3) document.getElementById(`conn-${i}`).classList.add('done');
+  }
+  // Mark current step as active
+  document.getElementById(`step-item-${n}`).className = 'step-item active navigable';
+  // Mark future steps as default
+  for (let i = n + 1; i <= 3; i++) {
+    document.getElementById(`step-item-${i}`).className = 'step-item navigable';
+    document.getElementById(`step-circle-${i}`).textContent = i;
+    if (i > 0) document.getElementById(`conn-${i-1}`).classList.remove('done');
+  }
+
+  // Show/hide panels
+  for (let i = 0; i <= 3; i++) {
+    const p = document.getElementById(`panel-${i}`);
+    p.classList.toggle('active', i === n);
+  }
+
+  currentStep = n;
+
+  // Step-specific init
+  if (n === 2) {
+    // 进入语义步骤时，检查是否已有语义脚本
+    checkExistingSemanticScript();
+    // 直接启用"进入API调试"按钮，无需等待语义脚本确认
+    document.getElementById('btn-to-step3').disabled = false;
+  }
+  
+  if (n === 3) {
+    const preview = document.getElementById('api-script-preview').value;
+    if (preview) document.getElementById('api-script-edit').value = preview;
+    document.getElementById('replay-api-log').innerHTML = '';
+    document.getElementById('replay-api-status').className = 'result-badge';
+    
+    // 强制启用回放按钮，无需任何前置条件
+    document.getElementById('btn-replay-api').disabled = false;
+    
+    // 如果没有脚本内容，设置一个默认提示
+    const apiEdit = document.getElementById('api-script-edit');
+    if (!apiEdit.value.trim()) {
+      apiEdit.value = '// API 脚本准备就绪\n// 点击"生成 API 脚本"按钮生成完整的测试脚本\n// 或者直接点击"回放 API"运行现有脚本';
+    }
+  }
+}
+
+// ── Step 0: Seed Data Upload ──────────────────────────────────────────────────
+function handleSeedDataUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!file.name.endsWith('.json')) {
+    alert('请选择 JSON 文件');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const jsonContent = e.target.result;
+      const seedData = JSON.parse(jsonContent);
+      
+      // 发送到后端保存
+      ipcRenderer.send('upload-seed-data', { content: jsonContent, filename: file.name });
+      
+      // 显示文件信息
+      const preview = document.getElementById('seed-data-preview');
+      let summary = '<div style="padding:16px;">';
+      summary += `<h2 style="color:#4fc3f7;margin-bottom:12px;">✓ ${file.name}</h2>`;
+      
+      if (seedData.project) {
+        summary += `<p><strong>项目名称:</strong> ${seedData.project.name || '未命名'}</p>`;
+        summary += `<p><strong>项目 Token:</strong> ${seedData.project.token || 'N/A'}</p>`;
+      }
+      
+      if (seedData.pbcs && seedData.pbcs.length > 0) {
+        summary += `<p><strong>PBC 数量:</strong> ${seedData.pbcs.length}</p>`;
+        summary += '<div style="margin-top:12px;"><strong>PBC 列表:</strong><ul style="margin-left:20px;margin-top:6px;">';
+        seedData.pbcs.slice(0, 5).forEach(pbc => {
+          summary += `<li>${pbc.name} (${pbc.token})</li>`;
+        });
+        if (seedData.pbcs.length > 5) {
+          summary += `<li style="color:#888;">... 还有 ${seedData.pbcs.length - 5} 个 PBC</li>`;
+        }
+        summary += '</ul></div>';
+      }
+      
+      if (seedData.formEntities && seedData.formEntities.length > 0) {
+        summary += `<p style="margin-top:12px;"><strong>表单实体数量:</strong> ${seedData.formEntities.length}</p>`;
+      }
+      
+      summary += '<p style="margin-top:16px;padding:8px;background:#1a3a1a;border:1px solid #4caf50;border-radius:4px;color:#4caf50;">✓ Seed Data 已上传，将在生成语义脚本时提供项目结构信息</p>';
+      summary += '</div>';
+      
+      preview.innerHTML = summary;
+      
+      document.getElementById('seed-data-status').textContent = `✓ ${file.name}`;
+      document.getElementById('seed-data-status').style.color = '#4caf50';
+      document.getElementById('btn-to-step1').disabled = false;
+      document.getElementById('btn-generate-api-doc').disabled = false;
+      seedDataUploaded = true;
+      
+    } catch (err) {
+      alert(`JSON 解析失败: ${err.message}`);
+      console.error('Seed data parse error:', err);
+    }
+  };
+  
+  reader.onerror = () => {
+    alert('文件读取失败');
+  };
+  
+  reader.readAsText(file);
+}
+
+ipcRenderer.on('seed-data-saved', (e, data) => {
+  console.log('Seed data saved:', data.path);
+});
+
+// ── Generate API Documentation ────────────────────────────────────────────────
+function generateApiDoc() {
+  document.getElementById('seed-data-status').textContent = '⏳ 正在生成 API 文档...';
+  document.getElementById('seed-data-status').style.color = '#4fc3f7';
+  document.getElementById('btn-generate-api-doc').disabled = true;
+  
+  const preview = document.getElementById('seed-data-preview');
+  preview.innerHTML = '<div class="empty-state"><div style="text-align:center;padding:40px;"><div style="font-size:32px;margin-bottom:16px;">🤖</div><div style="font-size:14px;color:#4fc3f7;">AI 正在分析项目结构...</div><div style="font-size:12px;color:#666;margin-top:8px;">这可能需要几分钟时间</div></div></div>';
+  
+  ipcRenderer.send('generate-api-doc');
+}
+
+ipcRenderer.on('api-doc-context-ready', (e, data) => {
+  // 复制触发语到剪贴板
+  navigator.clipboard.writeText(data.triggerMsg).catch(() => {});
+  
+  document.getElementById('seed-data-status').textContent = '📋 已复制，请粘贴给 Kiro';
+  document.getElementById('seed-data-status').style.color = '#4fc3f7';
+  
+  const preview = document.getElementById('seed-data-preview');
+  preview.innerHTML = `
+    <div style="padding:20px;text-align:center;">
+      <div style="font-size:32px;margin-bottom:16px;">🤖</div>
+      <div style="font-size:14px;color:#4fc3f7;font-weight:600;margin-bottom:12px;">API 文档生成请求已准备好！</div>
+      <div style="font-size:12px;color:#888;line-height:1.8;margin-bottom:16px;">
+        切换到 <b style="color:#d4d4d4;">Kiro 聊天框</b><br>
+        按 <b style="color:#d4d4d4;">Ctrl+V</b> 粘贴并发送<br>
+        Kiro 会分析项目结构并生成完整的 API 文档
+      </div>
+      <div style="background:#1a2a3a;border:1px solid #007acc;border-radius:4px;padding:10px;font-size:11px;color:#9cdcfe;text-align:left;max-height:200px;overflow-y:auto;">
+        ${escapeHtml(data.triggerMsg)}
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:#555;">
+        Kiro 生成文档后会保存到 <code>ui-recorder-workspace/api-documentation.md</code>
+      </div>
+    </div>
+  `;
+});
+
+ipcRenderer.on('api-doc-done', (e, data) => {
+  document.getElementById('seed-data-status').textContent = '✓ API 文档已生成';
+  document.getElementById('seed-data-status').style.color = '#4caf50';
+  document.getElementById('btn-generate-api-doc').disabled = false;
+  
+  const preview = document.getElementById('seed-data-preview');
+  preview.innerHTML = `
+    <div style="padding:20px;">
+      <h2 style="color:#4fc3f7;margin-bottom:12px;">✓ API 文档已生成</h2>
+      <p style="margin-bottom:12px;">文档已保存到: <code>ui-recorder-workspace/api-documentation.md</code></p>
+      <div style="background:#1a3a1a;border:1px solid #4caf50;border-radius:4px;padding:12px;margin-bottom:16px;">
+        <div style="color:#4caf50;font-weight:600;margin-bottom:8px;">📖 文档内容预览</div>
+        <div style="font-size:11px;color:#d4d4d4;line-height:1.6;max-height:400px;overflow-y:auto;white-space:pre-wrap;">${escapeHtml(data.preview)}</div>
+      </div>
+      <button onclick="ipcRenderer.send('open-folder', {folderPath: '${data.docPath.replace(/\\/g, '\\\\')}'})" style="background:#007acc;color:#fff;border:none;border-radius:4px;padding:8px 16px;cursor:pointer;font-size:12px;">
+        📂 打开文档所在文件夹
+      </button>
+    </div>
+  `;
+});
+// ── Session ───────────────────────────────────────────────────────────────────
+function ensureSession(url) {
+  if (!sessionCreated) {
+    ipcRenderer.send('create-session', url);
+    sessionCreated = true;
+  }
+}
+
+ipcRenderer.on('session-created', (e, data) => {
+  document.getElementById('session-info').textContent = `Session: ${data.id}`;
+});
+
+// ── Step 1: Recording ─────────────────────────────────────────────────────────
+function startRecording() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url || url === 'https://') {
+    alert('请输入有效的 URL');
+    return;
+  }
+
+  ensureSession(url);
+
+  document.getElementById('btn-start-record').disabled = true;
+  document.getElementById('btn-stop-record').disabled = false;
+  document.getElementById('record-status').textContent = '⏺ 录制中...';
+  document.getElementById('record-status').style.color = '#ef5350';
+  recordingActive = true;
+
+  // Clear previous data
+  document.getElementById('api-list').innerHTML = '<div class="empty-state">等待 API 请求...</div>';
+  document.getElementById('api-count').textContent = '0';
+  document.getElementById('ui-script-preview').value = '';
+
+  ipcRenderer.send('start-recording', url);
+}
+
+ipcRenderer.on('recording-started', (e, data) => {
+  if (data.status === 'success') {
+    document.getElementById('record-status').textContent = '⏺ Playwright Inspector 已启动，请在浏览器中操作';
+  }
+});
+
+ipcRenderer.on('recording-done', (e, data) => {
+  recordingActive = false;
+  document.getElementById('btn-start-record').disabled = false;
+  document.getElementById('btn-stop-record').disabled = true;
+  document.getElementById('record-status').textContent = `✓ 录制完成 — ${data.apiCount} 个 API`;
+  document.getElementById('record-status').style.color = '#4caf50';
+
+  if (data.uiScript) {
+    document.getElementById('ui-script-preview').value = data.uiScript;
+  }
+  document.getElementById('btn-to-step2').disabled = false;
+  
+  // 更新最大到达步骤
+  maxReachedStep = Math.max(maxReachedStep, 1);
+});
+
+ipcRenderer.on('ui-script-updated', (e, script) => {
+  document.getElementById('ui-script-preview').value = script;
+});
+
+function stopRecording() {
+  ipcRenderer.send('stop-recording');
+  document.getElementById('btn-start-record').disabled = false;
+  document.getElementById('btn-stop-record').disabled = true;
+  document.getElementById('record-status').textContent = '⏹ 已停止';
+  document.getElementById('record-status').style.color = '#888';
+}
+
+ipcRenderer.on('recording-stopped', () => {
+  // recording-done will fire from the process close event
+});
+
+// ── API List rendering ────────────────────────────────────────────────────────
+ipcRenderer.on('recording-done', (e, data) => {
+  // This second handler updates the API list via get-session
+  ipcRenderer.send('get-session');
+});
+
+ipcRenderer.on('session-info', (e, session) => {
+  renderApiList(session.harApis || []);
+  if (session.uiScript) {
+    document.getElementById('ui-script-preview').value = session.uiScript;
+    document.getElementById('btn-to-step2').disabled = false;
+  }
+  if (session.apiScript && currentStep >= 3) {
+    document.getElementById('api-script-preview').value = session.apiScript;
+    document.getElementById('api-script-edit').value = session.apiScript;
+    // 如果当前在API调试步骤且有脚本，启用回放按钮
+    if (currentStep === 3) {
+      document.getElementById('btn-replay-api').disabled = false;
+    }
+  }
+});
+
+function renderApiList(apis) {
+  const businessApis = apis.filter(a => {
+    const u = (a.url || '').toLowerCase();
+    return (u.includes('/api/') || (a.mimeType || '').includes('json')) &&
+           !u.match(/\.(js|css|png|jpg|svg|ico|woff)(\?|$)/);
+  });
+
+  document.getElementById('api-count').textContent = businessApis.length;
+
+  if (businessApis.length === 0) {
+    document.getElementById('api-list').innerHTML = '<div class="empty-state">未捕获到业务 API</div>';
+    return;
+  }
+
+  const html = businessApis.map(a => {
+    let pathname = a.url;
+    try { pathname = new URL(a.url).pathname; } catch {}
+    const method = a.method || 'GET';
+    const status = a.status || 0;
+    const statusClass = status >= 500 ? 'status-5xx' : status >= 400 ? 'status-4xx' : status >= 300 ? 'status-3xx' : 'status-2xx';
+    return `<div class="api-item">
+      <span class="api-method method-${method}">${method}</span>
+      <span class="api-url" title="${a.url}">${pathname}</span>
+      <span class="api-status ${statusClass}">${status}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('api-list').innerHTML = html;
+}
+
+// ── Step 2: Semantic ─────────────────────────────────────────────────────────
+function onUiScriptEdit() {
+  uiScriptDirty = true;
+}
+
+function replayUi() {
+  if (uiScriptDirty) {
+    const script = document.getElementById('ui-script-edit').value;
+    ipcRenderer.send('update-ui-script', script);
+    uiScriptDirty = false;
+  }
+
+  document.getElementById('btn-replay-ui').disabled = true;
+  document.getElementById('btn-stop-replay-ui').disabled = false;
+  document.getElementById('replay-ui-status').className = 'result-badge';
+  document.getElementById('replay-ui-log').innerHTML = '';
+  replayActive = true;
+
+  ipcRenderer.send('replay-ui');
+}
+
+function stopReplay() {
+  ipcRenderer.send('stop-replay');
+  document.getElementById('btn-replay-api').disabled = false;
+  document.getElementById('btn-stop-replay-api').disabled = true;
+  replayActive = false;
+}
+
+ipcRenderer.on('replay-log', (e, data) => {
+  const log = document.getElementById('replay-api-log');
+  const line = document.createElement('div');
+  line.className = `log-line ${data.type}`;
+  line.textContent = data.msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+});
+
+ipcRenderer.on('replay-result', (e, data) => {
+  replayActive = false;
+  const nextBtnId = 'btn-finish';
+
+  document.getElementById('btn-replay-api').disabled = false;
+  document.getElementById('btn-stop-replay-api').disabled = true;
+
+  const badge = document.getElementById('replay-api-status');
+  const log   = document.getElementById('replay-api-log');
+
+  if (data.success) {
+    badge.className = 'result-badge success';
+    badge.textContent = '✓ 回放成功';
+    const line = document.createElement('div');
+    line.className = 'log-line success';
+    line.textContent = '✓ 所有测试通过！';
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+    document.getElementById(nextBtnId).disabled = false;
+  } else {
+    badge.className = 'result-badge fail';
+    badge.textContent = `✗ 回放失败 (code: ${data.code})`;
+    const line = document.createElement('div');
+    line.className = 'log-line fail';
+    line.textContent = `✗ 测试失败，退出码: ${data.code}`;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+    // Still allow proceeding
+    document.getElementById(nextBtnId).disabled = false;
+  }
+});
+
+// ── Step 3: API Generation ────────────────────────────────────────────────────
+function generateSemantic() {
+  document.getElementById('semantic-status').textContent = '⏳ 准备上下文...';
+  document.getElementById('semantic-preview').innerHTML = '<div class="empty-state">正在准备上下文，请稍候...</div>';
+  ipcRenderer.send('generate-semantic');
+}
+
+ipcRenderer.on('semantic-context-ready', (e, data) => {
+  // 复制触发语到剪贴板
+  navigator.clipboard.writeText(data.triggerMsg).catch(() => {});
+
+  document.getElementById('semantic-status').textContent = '📋 已复制，请粘贴给 Kiro';
+  document.getElementById('semantic-status').style.color = '#4fc3f7';
+
+  document.getElementById('semantic-preview').innerHTML = `
+    <div style="padding:20px;text-align:center;">
+      <div style="font-size:32px;margin-bottom:16px;">🤖</div>
+      <div style="font-size:14px;color:#4fc3f7;font-weight:600;margin-bottom:12px;">上下文已准备好！</div>
+      <div style="font-size:12px;color:#888;line-height:1.8;margin-bottom:16px;">
+        切换到 <b style="color:#d4d4d4;">Kiro 聊天框</b><br>
+        按 <b style="color:#d4d4d4;">Ctrl+V</b> 粘贴并发送<br>
+        Kiro 会自动生成语义脚本并保存
+      </div>
+      <div style="background:#1a2a3a;border:1px solid #007acc;border-radius:4px;padding:10px;font-size:11px;color:#9cdcfe;text-align:left;">
+        ${escapeHtml(data.triggerMsg)}
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:#555;">
+        Kiro 保存文件后，这里会自动更新<br>
+        <span style="color:#ffa726;">⚠️ 确认满意后在 Kiro 说"没问题"，工具才会解锁下一步</span>
+      </div>
+    </div>
+  `;
+});
+
+ipcRenderer.on('semantic-done', (e, data) => {
+  document.getElementById('semantic-status').textContent = '✓ 生成完成，等待确认...';
+  document.getElementById('semantic-status').style.color = '#ffa726';
+  document.getElementById('semantic-preview').innerHTML = renderMarkdown(data.semantic);
+  // 不在这里解锁，等用户在 Kiro 确认后才解锁
+});
+
+ipcRenderer.on('semantic-approved', () => {
+  document.getElementById('semantic-status').textContent = '✅ 已确认，可进入下一步';
+  document.getElementById('semantic-status').style.color = '#4caf50';
+  document.getElementById('btn-to-step3').disabled = false;
+  // 显示解锁动画
+  const btn = document.getElementById('btn-to-step3');
+  btn.style.animation = 'none';
+  btn.style.boxShadow = '0 0 12px rgba(76,175,80,0.6)';
+  setTimeout(() => btn.style.boxShadow = '', 3000);
+});
+
+// ── Step 3: API Generation ────────────────────────────────────────────────────
+function generateApiScript() {
+  document.getElementById('api-gen-status').textContent = '⏳ 准备上下文...';
+  document.getElementById('api-script-preview').value = '';
+  ipcRenderer.send('generate-api-script');
+}
+
+ipcRenderer.on('api-context-ready', (e, data) => {
+  navigator.clipboard.writeText(data.triggerMsg).catch(() => {});
+  document.getElementById('api-gen-status').textContent = '📋 已复制，请粘贴给 Kiro';
+  document.getElementById('api-gen-status').style.color = '#4fc3f7';
+  document.getElementById('api-script-preview').value =
+    '// 等待 Kiro 生成 API 脚本...\n// 请切换到 Kiro 聊天框，Ctrl+V 粘贴发送';
+});
+
+ipcRenderer.on('api-script-done', (e, data) => {
+  document.getElementById('api-gen-status').textContent = '✓ 生成完成';
+  document.getElementById('api-gen-status').style.color = '#4caf50';
+  document.getElementById('api-script-preview').value = data.apiScript;
+  document.getElementById('api-script-edit').value = data.apiScript;
+  document.getElementById('btn-replay-api').disabled = false;
+});
+
+// ── Step 5: UI Replay ────────────────────────────────────────────────────────
+function onApiScriptEdit() {
+  apiScriptDirty = true;
+}
+
+function replayApi() {
+  if (apiScriptDirty) {
+    const script = document.getElementById('api-script-edit').value;
+    ipcRenderer.send('update-api-script', script);
+    apiScriptDirty = false;
+  }
+
+  document.getElementById('btn-replay-api').disabled = true;
+  document.getElementById('btn-stop-replay-api').disabled = false;
+  document.getElementById('replay-api-status').className = 'result-badge';
+  document.getElementById('replay-api-log').innerHTML = '';
+  replayActive = true;
+
+  ipcRenderer.send('replay-api');
+}
+
+// ── Finish ────────────────────────────────────────────────────────────────────
+function finish() {
+  const sceneName = prompt(
+    '🎉 测试流程完成！\n\n请为这次录制的场景命名：\n（例如：新增物料、用户登录、查询订单）',
+    ''
+  );
+
+  if (sceneName === null) return;
+
+  const name = sceneName.trim() || `场景_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}`;
+  ipcRenderer.send('save-session', { name });
+}
+
+ipcRenderer.on('session-save-canceled', () => {
+  // 用户取消了文件夹选择，不做任何事
+});
+
+ipcRenderer.on('session-saved', (e, data) => {
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById(`step-item-${i}`).className = 'step-item done';
+    document.getElementById(`step-circle-${i}`).textContent = '✓';
+  }
+  for (let i = 1; i <= 2; i++) {
+    document.getElementById(`conn-${i}`).classList.add('done');
+  }
+
+  const msg = `✅ 已保存！\n\n场景名称：${data.name}\n保存位置：${data.savedDir}\n\n包含文件：\n` +
+    data.files.map(f => `  • ${f}`).join('\n') +
+    '\n\n是否打开保存目录？';
+
+  if (confirm(msg)) {
+    ipcRenderer.send('open-folder', { folderPath: data.savedDir });
+  }
+});
+
+// ── Save Draft ────────────────────────────────────────────────────────────────
+function saveDraft() {
+  ipcRenderer.send('save-draft', { step: currentStep });
+}
+
+ipcRenderer.on('draft-save-canceled', () => {});
+
+ipcRenderer.on('draft-saved', (e, data) => {
+  const statusEl = document.getElementById('draft-status');
+  const time = new Date(data.savedAt).toLocaleTimeString('zh-CN');
+  statusEl.textContent = `✓ 已保存 ${time}`;
+  statusEl.style.color = '#4caf50';
+  setTimeout(() => { statusEl.style.color = '#555'; }, 5000);
+
+  const msg = `✅ 已保存所有录制数据！\n\n保存位置：${data.destDir}\n\n包含文件：\n` +
+    data.files.map(f => `  • ${f}`).join('\n') +
+    '\n\n是否打开保存目录？';
+
+  if (confirm(msg)) {
+    ipcRenderer.send('open-folder', { folderPath: data.destDir });
+  }
+});
+
+// ── Open Session ──────────────────────────────────────────────────────────────
+function openSession() {
+  ipcRenderer.send('open-session');
+}
+
+ipcRenderer.on('session-open-canceled', () => {});
+
+ipcRenderer.on('session-opened', (e, data) => {
+  // 恢复 session 信息
+  document.getElementById('session-info').textContent = `已恢复: ${data.dir.split(/[/\\]/).pop()}`;
+  sessionCreated = true;
+
+  // 恢复 URL
+  if (data.url) document.getElementById('url-input').value = data.url;
+
+  // 恢复 UI 脚本
+  if (data.uiScript) {
+    document.getElementById('ui-script-preview').value = data.uiScript;
+    document.getElementById('btn-to-step2').disabled = false;
+    maxReachedStep = Math.max(maxReachedStep, 1);
+  }
+
+  // 恢复 API 列表
+  if (data.harApis && data.harApis.length > 0) {
+    renderApiList(data.harApis);
+  }
+
+  // 恢复语义脚本
+  if (data.semanticScript) {
+    document.getElementById('semantic-script-edit').value = data.semanticScript;
+    document.getElementById('semantic-preview').innerHTML = renderMarkdown(data.semanticScript);
+    if (data.semanticApproved) {
+      document.getElementById('semantic-status').textContent = '✅ 已确认';
+      document.getElementById('semantic-status').style.color = '#4caf50';
+      document.getElementById('btn-to-step3').disabled = false;
+      maxReachedStep = Math.max(maxReachedStep, 2);
+    } else {
+      document.getElementById('semantic-status').textContent = '✓ 生成完成，等待确认...';
+      document.getElementById('semantic-status').style.color = '#ffa726';
+    }
+  }
+
+  // 恢复 API 脚本
+  if (data.apiScript) {
+    document.getElementById('api-script-preview').value = data.apiScript;
+    document.getElementById('api-script-edit').value = data.apiScript;
+    document.getElementById('btn-replay-api').disabled = false;
+    document.getElementById('api-gen-status').textContent = '✓ 已恢复';
+    document.getElementById('api-gen-status').style.color = '#4caf50';
+    maxReachedStep = Math.max(maxReachedStep, 3);
+  }
+
+  // 跳转到对应步骤
+  const step = typeof data.step === 'number' ? data.step : 1;
+  goToStep(step);
+
+  alert(`✅ 会话已恢复！\n\n目录：${data.dir}\n步骤：${step}\nAPI 数量：${data.apiCount}\n\n提示：可以点击顶部步骤按钮自由切换步骤。`);
+});
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── 开始调试：把上下文写入文件，Kiro 通过 hook 感知 ──────────────────────────
+function startDebug(type) {
+  const btn = document.getElementById(type === 'ui' ? 'btn-start-debug-ui' : 'btn-start-debug-api');
+  const script = type === 'ui'
+    ? document.getElementById('ui-script-edit').value
+    : document.getElementById('api-script-edit').value;
+
+// ── Semantic Script Editor ─────────────────────────────────────────────────────
+let semanticScriptDirty = false;
+
+function onSemanticScriptEdit() {
+  semanticScriptDirty = true;
+  document.getElementById('btn-save-semantic').disabled = false;
+  
+  // 实时预览（简单 Markdown 渲染）
+  const script = document.getElementById('semantic-script-edit').value;
+  const preview = document.getElementById('semantic-preview');
+  
+  if (script.trim()) {
+    preview.innerHTML = renderMarkdown(script);
+  } else {
+    preview.innerHTML = '<div class="empty-state">编辑左侧脚本，预览将实时更新</div>';
+  }
+}
+
+function saveSemanticScript() {
+  const script = document.getElementById('semantic-script-edit').value;
+  
+  if (!script.trim()) {
+    alert('脚本内容为空');
+    return;
+  }
+  
+  ipcRenderer.send('save-semantic-script', { content: script });
+  
+  document.getElementById('btn-save-semantic').disabled = true;
+  document.getElementById('semantic-status').textContent = '💾 保存中...';
+  document.getElementById('semantic-status').style.color = '#4fc3f7';
+  
+  semanticScriptDirty = false;
+}
+
+ipcRenderer.on('semantic-script-saved', (e, data) => {
+  document.getElementById('semantic-status').textContent = '✅ 已保存';
+  document.getElementById('semantic-status').style.color = '#4caf50';
+  document.getElementById('btn-to-step3').disabled = false;
+  
+  // 提示用户可以继续
+  setTimeout(() => {
+    const proceed = confirm('✅ 语义脚本已保存！\n\n是否进入下一步（API 调试）？\n\n点击"确定"继续，点击"取消"继续编辑。');
+    if (proceed) {
+      goToStep(3);
+    }
+  }, 500);
+});
+
+// 简单的 Markdown 渲染（基础功能）
+function renderMarkdown(text) {
+  if (!text) return '';
+  
+  // 转义 HTML
+  let html = escapeHtml(text);
+  
+  // 标题
+  html = html.replace(/^### (.+)$/gm, '<h3 style="color:#9cdcfe;font-size:14px;margin:14px 0 6px;border-bottom:1px solid #3c3c3c;padding-bottom:4px;">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 style="color:#9cdcfe;font-size:15px;margin:16px 0 8px;border-bottom:1px solid #3c3c3c;padding-bottom:4px;">$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 style="color:#4fc3f7;font-size:17px;margin:18px 0 10px;">$1</h1>');
+  
+  // 粗体
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fff;">$1</strong>');
+  
+  // 代码
+  html = html.replace(/`(.+?)`/g, '<code style="background:#1e1e1e;color:#ce9178;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:11px;">$1</code>');
+  
+  // 列表
+  html = html.replace(/^- (.+)$/gm, '<li style="margin-left:20px;margin-bottom:3px;">$1</li>');
+  html = html.replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:20px;margin-bottom:3px;">$2</li>');
+  
+  // 段落
+  html = html.replace(/\n\n/g, '</p><p style="margin-bottom:8px;">');
+  html = '<p style="margin-bottom:8px;">' + html + '</p>';
+  
+  return html;
+}
+
+// 初始化：检查是否已有语义脚本文件
+function checkExistingSemanticScript() {
+  ipcRenderer.send('check-semantic-script');
+}
+
+ipcRenderer.on('semantic-script-status', (e, data) => {
+  if (data.exists && data.content) {
+    document.getElementById('semantic-script-edit').value = data.content;
+    document.getElementById('semantic-preview').innerHTML = renderMarkdown(data.content);
+    document.getElementById('semantic-status').textContent = '✓ 已加载现有脚本';
+    document.getElementById('semantic-status').style.color = '#4caf50';
+  }
+  // 无论是否有现有脚本，都启用"进入API调试"按钮
+  document.getElementById('btn-to-step3').disabled = false;
+});
+
+  const replayLog = type === 'ui'
+    ? document.getElementById('replay-ui-log').innerText
+    : document.getElementById('replay-api-log').innerText;
+
+  // 按钮动画
+  btn.style.opacity = '0.6';
+  btn.innerHTML = '<span>⏳</span><span>发送中...</span>';
+
+  ipcRenderer.send('start-debug', { type, script, replayLog });
+}
+
+ipcRenderer.on('debug-started', (e, data) => {
+  const type = data.type;
+  const btn = document.getElementById(type === 'ui' ? 'btn-start-debug-ui' : 'btn-start-debug-api');
+  const statusEl = document.getElementById(type === 'ui' ? 'debug-ui-status' : 'debug-api-status');
+
+  // 把触发语复制到剪贴板
+  const triggerMsg = type === 'ui'
+    ? '我在用 UI Recorder 调试 UI 脚本，请读取 ui-recorder-workspace/debug-context.md 了解当前上下文，然后告诉我你看到了什么'
+    : '我在用 UI Recorder 调试 API 脚本，请读取 ui-recorder-workspace/debug-context.md 了解当前上下文，然后告诉我你看到了什么';
+
+  navigator.clipboard.writeText(triggerMsg).catch(() => {});
+
+  // 恢复按钮
+  btn.style.opacity = '1';
+  btn.innerHTML = '<span>✓</span><span>已复制</span>';
+  btn.style.background = 'linear-gradient(135deg, #0e7a0d, #007acc)';
+
+  // 显示状态提示
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '✓ 已复制到剪贴板！<br>切换到 <b>Kiro 聊天框</b>，<b>Ctrl+V</b> 粘贴发送即可';
+  }
+
+  // 3秒后恢复按钮原样
+  setTimeout(() => {
+    btn.style.background = 'linear-gradient(135deg, #6f42c1, #007acc)';
+    btn.innerHTML = '<span>🤖</span><span>开始调试</span>';
+  }, 3000);
+});
+
+// 监听 Kiro 修改脚本后的文件变化通知
+ipcRenderer.on('script-file-changed', (e, data) => {
+  if (data.type === 'ui') {
+    document.getElementById('ui-script-edit').value = data.script;
+    const badge = document.getElementById('kiro-ui-sync-badge');
+    if (badge) { badge.style.display = 'inline-block'; setTimeout(() => badge.style.display = 'none', 4000); }
+    document.getElementById('btn-finish').disabled = false;
+    // Flash the textarea border green briefly
+    const ta = document.getElementById('ui-script-edit');
+    ta.style.borderColor = '#4caf50';
+    setTimeout(() => ta.style.borderColor = '', 2000);
+  } else if (data.type === 'api') {
+    document.getElementById('api-script-edit').value = data.script;
+    document.getElementById('api-script-preview').value = data.script;
+    const badge = document.getElementById('kiro-api-sync-badge');
+    if (badge) { badge.style.display = 'inline-block'; setTimeout(() => badge.style.display = 'none', 4000); }
+    document.getElementById('btn-finish').disabled = false;
+    document.getElementById('btn-replay-api').disabled = false;  // 启用回放
+    const ta = document.getElementById('api-script-edit');
+    ta.style.borderColor = '#4caf50';
+    setTimeout(() => ta.style.borderColor = '', 2000);
+  }
+});
+
+// ── Markdown renderer (simple) ────────────────────────────────────────────────
+function renderMarkdown(md) {
+  if (!md) return '<div class="empty-state">无内容</div>';
+  let html = '';
+  const lines = md.split('\n');
+  let inList = false;
+
+  for (const raw of lines) {
+    const line = raw
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    if (line.startsWith('# ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<h1>${line.slice(2)}</h1>`;
+    } else if (line.startsWith('## ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<h2>${line.slice(3)}</h2>`;
+    } else if (line.startsWith('> ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<blockquote>${line.slice(2).replace(/`([^`]+)`/g, '<code>$1</code>')}</blockquote>`;
+    } else if (/^\d+\.\s/.test(line) || line.startsWith('- ')) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      const content = line.replace(/^(\d+\.\s|-\s)/, '').replace(/`([^`]+)`/g, '<code>$1</code>');
+      html += `<li>${content}</li>`;
+    } else if (line.trim() === '') {
+      if (inList) { html += '</ul>'; inList = false; }
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      const content = line.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      html += `<p>${content}</p>`;
+    }
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Request session info on load in case we're resuming
+  ipcRenderer.send('get-session');
+  
+  // 强制启用所有导航按钮，移除不必要的限制
+  setTimeout(() => {
+    document.getElementById('btn-to-step3').disabled = false;
+    if (currentStep === 3) {
+      document.getElementById('btn-replay-api').disabled = false;
+    }
+  }, 1000);
+});
+</script>
+</body>
+</html>
+

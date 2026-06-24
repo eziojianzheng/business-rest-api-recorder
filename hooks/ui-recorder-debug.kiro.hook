@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "UI Recorder: 开始调试",
+  "description": "当 debug-context.md 被修改时自动触发，读取 UI Recorder 调试上下文",
+  "version": "3",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["**/debug-context.md"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "请执行以下步骤：\n\n1. 读取 `ui-recorder-workspace/debug-context.md`，获取脚本类型（UI 或 API）\n2. 根据脚本类型读取实际脚本文件：\n   - UI 脚本：读取 `ui-recorder-workspace/ui-script.js`\n   - API 脚本：读取 `ui-recorder-workspace/api-script.spec.js`\n3. 总结脚本内容：\n   - 说明有多少个测试步骤\n   - 列出主要的 API 端点或操作\n   - 如果有回放日志错误，指出关键错误\n\n然后回复：'收到！我已经看到了 [脚本类型]，包含 [N] 个测试步骤。主要测试：[简要描述]。请告诉我你想做什么？'"
+  }
+}

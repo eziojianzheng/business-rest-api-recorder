@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "UI Recorder Chat",
+  "description": "当 UI Recorder 的 kiro-prompt.md 被更新时，自动读取用户需求并修改对应的脚本文件",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/sessions/**/kiro-prompt.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "The file `kiro-prompt.md` in a UI Recorder session has been updated. A user has sent a new request.\n\n**Your task:**\n1. Read the updated `kiro-prompt.md` file\n2. Find the LATEST section at the bottom (after the last `---` separator) — this is the user's new request\n3. Read the **target file** specified in that section\n4. Modify the target file to fulfill the user's request\n5. Save the modified file\n\n**Rules:**\n- Only modify the target file specified in the latest section\n- Keep the existing test structure, only add/modify what the user asked for\n- If the user asks to add assertions/validations, add them using Playwright's `expect()` API\n- If the user asks to fix an error, read the error from the replay log context if available\n- After saving, the UI Recorder will automatically detect the change and notify the user\n\nDo it now — read the file and make the changes."
+  }
+}

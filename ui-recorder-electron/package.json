@@ -1,0 +1,28 @@
+{
+  "name": "ui-recorder-electron",
+  "version": "2.0.0",
+  "description": "API Recording and Test Script Generation Tool - 基于 Playwright 的 API 录制与测试脚本生成工具",
+  "main": "main-flow.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "install-playwright": "npm install playwright && npx playwright install chromium"
+  },
+  "keywords": [
+    "electron",
+    "recorder",
+    "playwright",
+    "api-testing",
+    "test-automation",
+    "semantic-script"
+  ],
+  "author": "CETA Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "electron": "^28.0.0"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  }
+}
