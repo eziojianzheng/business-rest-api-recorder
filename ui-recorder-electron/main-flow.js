@@ -466,6 +466,70 @@ ipcMain.on('start-recording', async (event, url) => {
     event.reply('recording-started', { status: 'success' });
 });
 
+
+// ── Continue recording (不清空数据) ──────────────────────────────────────────
+ipcMain.on('continue-recording', async (event, url) => {
+    session.url = url;
+    const outputFile = path.join(session.dir, 'ui-script.js');
+    const harFile    = path.join(session.dir, 'network.har');
+
+    // 继续录制时，不清空任何文件，直接追加录制
+
+    const playwrightCli = path.join(__dirname, 'node_modules', 'playwright-core', 'cli.js');
+    const args = [
+        'codegen',
+        '--output',   outputFile,
+        '--save-har', harFile,
+        '--target',   'playwright-test',
+        '--channel',  'chrome',
+        url
+    ];
+
+    codegenProcess = runNodeScript(playwrightCli, args, {
+        cwd: __dirname,
+        windowsHide: false
+    });
+
+    codegenProcess.stdout.on('data', d => console.log('[Codegen]', d.toString().trim()));
+    codegenProcess.stderr.on('data', d => console.error('[Codegen]', d.toString().trim()));
+
+    const watchInterval = setInterval(() => {
+        if (fs.existsSync(outputFile)) {
+            const newScript = fs.readFileSync(outputFile, 'utf-8');
+            session.uiScript = newScript;
+            mainWindow.webContents.send('script-update', { uiScript: newScript });
+        }
+    }, 1000);
+
+    codegenProcess.on('close', () => {
+        clearInterval(watchInterval);
+        
+        // 重新读取 HAR 文件
+        if (fs.existsSync(harFile)) {
+            try {
+                const har = JSON.parse(fs.readFileSync(harFile, 'utf-8'));
+                session.harApis = (har.log?.entries || []).map(e => ({
+                    method:   e.request.method,
+                    url:      e.request.url,
+                    status:   e.response.status,
+                    timestamp: e.startedDateTime,
+                    postData: e.request.postData?.text || null,
+                    response: e.response.content?.text || null,
+                    mimeType: e.response.content?.mimeType || ''
+                }));
+            } catch(e) {}
+        }
+
+        mainWindow.webContents.send('recording-done', {
+            uiScript: session.uiScript,
+            apiCount: session.harApis.length
+        });
+    });
+
+    await new Promise(r => setTimeout(r, 1500));
+    event.reply('recording-started', { status: 'success' });
+});
+
 // ── Stop recording ────────────────────────────────────────────────────────────
 ipcMain.on('stop-recording', (event) => {
     if (codegenProcess) { codegenProcess.kill(); codegenProcess = null; }

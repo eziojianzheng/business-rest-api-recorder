@@ -194,7 +194,8 @@
       <input type="text" class="url-input" id="url-input"
              placeholder="https://example.com"
              value="http://localhost:9220/ui/login/basic?auth=basic">
-      <button class="btn-green" id="btn-start-record" onclick="startRecording()">▶ 开始录制</button>
+      <button class="btn-green" id="btn-start-record" onclick="confirmStartRecording()">▶ 开始录制</button>
+        <button class="btn-blue" id="btn-continue-record" onclick="continueRecording()" style="background:#1976d2;">▶ 继续录制</button>
       <button class="btn-red" id="btn-stop-record" onclick="stopRecording()" disabled>⏹ 停止录制</button>
       <span id="record-status" style="font-size:12px;color:#888;"></span>
     </div>
@@ -541,6 +542,49 @@ ipcRenderer.on('session-created', (e, data) => {
 });
 
 // ── Step 1: Recording ─────────────────────────────────────────────────────────
+
+  // 确认开始录制（会清空数据）
+  function confirmStartRecording() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) {
+      alert('请输入目标 URL');
+      return;
+    }
+    
+    // 检查是否有已录制的数据
+    const hasData = document.getElementById('ui-script-edit')?.value?.trim() ||
+                    document.getElementById('semantic-script-edit')?.value?.trim() ||
+                    document.getElementById('api-script-edit')?.value?.trim();
+    
+    if (hasData) {
+      if (!confirm('⚠️ 开始录制将清空所有当前数据（UI脚本、语义脚本、API脚本）！\n\n建议先保存当前会话后再开始新录制。\n\n确定要开始录制吗？')) {
+        return;
+      }
+    }
+    
+    startRecording();
+  }
+
+  // 继续录制（不清空数据）
+  function continueRecording() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) {
+      alert('请输入目标 URL');
+      return;
+    }
+    
+    ensureSession(url);
+    
+    document.getElementById('btn-start-record').disabled = true;
+    document.getElementById('btn-continue-record').disabled = true;
+    document.getElementById('btn-stop-record').disabled = false;
+    document.getElementById('record-status').textContent = '⏺ 继续录制中...';
+    document.getElementById('record-status').style.color = '#ef5350';
+    
+    // 发送继续录制请求（不清空数据）
+    ipcRenderer.send('continue-recording', url);
+  }
+
 function startRecording() {
   const url = document.getElementById('url-input').value.trim();
   if (!url || url === 'https://') {
@@ -581,6 +625,7 @@ ipcRenderer.on('recording-started', (e, data) => {
 ipcRenderer.on('recording-done', (e, data) => {
   recordingActive = false;
   document.getElementById('btn-start-record').disabled = false;
+  document.getElementById('btn-continue-record').disabled = false;
   document.getElementById('btn-stop-record').disabled = true;
   document.getElementById('record-status').textContent = `✓ 录制完成 — ${data.apiCount} 个 API`;
   document.getElementById('record-status').style.color = '#4caf50';
@@ -601,6 +646,8 @@ ipcRenderer.on('ui-script-updated', (e, script) => {
 function stopRecording() {
   ipcRenderer.send('stop-recording');
   document.getElementById('btn-start-record').disabled = false;
+  document.getElementById('btn-continue-record').disabled = false;
+  document.getElementById('btn-continue-record').disabled = false;
   document.getElementById('btn-stop-record').disabled = true;
   document.getElementById('record-status').textContent = '⏹ 已停止';
   document.getElementById('record-status').style.color = '#888';
