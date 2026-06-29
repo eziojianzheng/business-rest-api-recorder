@@ -5,8 +5,8 @@ const EventEmitter = require('events');
 
 const RUN_HISTORY_FILE = path.join(__dirname, 'run-history.json');
 const SPEC_FILE = path.join(__dirname, 'crm-full-flow.spec.js');
-const ELECTRON_PATH = path.join(__dirname, '..', 'ui-recorder-electron', 'node_modules', 'electron', 'dist', 'electron.exe');
-const PLAYWRIGHT_CLI = path.join(__dirname, '..', 'ui-recorder-electron', 'node_modules', '@playwright', 'test', 'cli.js');
+// 使用本平台自己的 node_modules，不依赖 ui-recorder-electron
+const PLAYWRIGHT_CLI = path.join(__dirname, 'node_modules', '@playwright', 'test', 'cli.js');
 const PLAYWRIGHT_CONFIG = path.join(__dirname, 'playwright.config.js');
 
 // 事件总线，用于向 SSE 客户端推送日志
@@ -100,13 +100,13 @@ function runTests() {
 
   const startTs = Date.now();
 
-  const env = { ...process.env, ELECTRON_RUN_AS_NODE: '1' };
+  const env = { ...process.env };
 
   const child = spawn(
-    ELECTRON_PATH,
+    process.execPath,   // 当前 Node.js 可执行文件
     [PLAYWRIGHT_CLI, 'test', SPEC_FILE, '--reporter=list', '--config', PLAYWRIGHT_CONFIG],
     {
-      cwd: path.join(__dirname, '..', 'ui-recorder-electron'),
+      cwd: __dirname,
       env,
       windowsHide: true
     }
