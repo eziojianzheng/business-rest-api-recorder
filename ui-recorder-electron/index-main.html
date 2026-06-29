@@ -666,17 +666,32 @@ ipcRenderer.on('recording-done', (e, data) => {
 
 ipcRenderer.on('session-info', (e, session) => {
   renderApiList(session.harApis || []);
+
+  // 恢复 UI 脚本
   if (session.uiScript) {
     document.getElementById('ui-script-preview').value = session.uiScript;
     document.getElementById('btn-to-step2').disabled = false;
+    document.getElementById('btn-to-step3').disabled = false;
   }
-  if (session.apiScript && currentStep >= 3) {
+
+  // 恢复 API 脚本（不限 step，启动时就恢复）
+  if (session.apiScript) {
     document.getElementById('api-script-preview').value = session.apiScript;
     document.getElementById('api-script-edit').value = session.apiScript;
-    // 如果当前在API调试步骤且有脚本，启用回放按钮
-    if (currentStep === 3) {
-      document.getElementById('btn-replay-api').disabled = false;
-    }
+    document.getElementById('btn-to-step3').disabled = false;
+    document.getElementById('btn-replay-api').disabled = false;
+  }
+
+  // 恢复 URL
+  if (session.url) {
+    const urlInput = document.getElementById('url-input');
+    if (urlInput && !urlInput.value) urlInput.value = session.url;
+  }
+
+  // 有任何内容时更新 session 标识
+  if (session.uiScript || session.apiScript || (session.harApis && session.harApis.length > 0)) {
+    document.getElementById('session-info').textContent = '已恢复上次 session';
+    sessionCreated = true;
   }
 });
 

@@ -1432,6 +1432,40 @@ function saveSessionFiles(srcDir, destDir, name) {
 }
 
 ipcMain.on('get-session', (event) => {
+    // 从磁盘恢复上次 session 内容
+    if (session.dir && fs.existsSync(session.dir)) {
+        const uiScriptPath  = path.join(session.dir, 'ui-script.js');
+        const apiScriptPath = path.join(session.dir, 'api-script.spec.js');
+        const harPath       = path.join(session.dir, 'network.har');
+
+        if (!session.uiScript && fs.existsSync(uiScriptPath)) {
+            session.uiScript = fs.readFileSync(uiScriptPath, 'utf-8');
+            console.log('[get-session] Restored uiScript from disk');
+        }
+        if (!session.apiScript && fs.existsSync(apiScriptPath)) {
+            session.apiScript = fs.readFileSync(apiScriptPath, 'utf-8');
+            console.log('[get-session] Restored apiScript from disk');
+        }
+        if ((!session.harApis || session.harApis.length === 0) && fs.existsSync(harPath)) {
+            try {
+                const harSize = fs.statSync(harPath).size;
+                if (harSize < 50 * 1024 * 1024) { // 只加载 50MB 以内的 HAR
+                    const har = JSON.parse(fs.readFileSync(harPath, 'utf-8'));
+                    session.harApis = (har.log?.entries || []).map(e => ({
+                        method: e.request.method,
+                        url: e.request.url,
+                        status: e.response.status,
+                        mimeType: e.response.content?.mimeType || ''
+                    }));
+                    console.log(`[get-session] Restored ${session.harApis.length} HAR entries from disk`);
+                } else {
+                    console.log('[get-session] HAR file too large (>50MB), skip loading');
+                }
+            } catch (e) {
+                console.warn('[get-session] Failed to parse HAR:', e.message);
+            }
+        }
+    }
     event.reply('session-info', session);
 });
 
