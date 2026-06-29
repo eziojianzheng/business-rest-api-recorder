@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM 自动化测试平台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+
+  /* ── 顶栏 ── */
+  header {
+    background: #1a1d27;
+    border-bottom: 1px solid #2d3148;
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header .badge {
+    background: #2563eb;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+  header .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #22c55e;
+    margin-left: auto;
+    transition: background .3s;
+  }
+  header .status-dot.running { background: #f59e0b; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  header .status-text { font-size: 13px; color: #94a3b8; }
+
+  /* ── 主体布局 ── */
+  main {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 20px;
+    padding: 24px 32px;
+    height: calc(100vh - 61px);
+  }
+
+  /* ── 卡片 ── */
+  .card {
+    background: #1a1d27;
+    border: 1px solid #2d3148;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 16px;
+  }
+
+  /* ── Testcase 卡片 ── */
+  .tc-card {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .tc-name { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .tc-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 14px; }
+  .tc-meta { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+  .tc-meta span { font-size: 12px; color: #64748b; }
+  .tc-meta span strong { color: #94a3b8; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-secondary { background: #2d3148; color: #e2e8f0; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-danger  { background: #dc2626; color: #fff; }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* ── 定时配置 ── */
+  .schedule-card {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+  }
+  .schedule-form { display: flex; flex-direction: column; gap: 12px; }
+  .form-row { display: flex; flex-direction: column; gap: 4px; }
+  .form-row label { font-size: 12px; color: #64748b; }
+  .form-row input, .form-row select {
+    background: #0f1117;
+    border: 1px solid #2d3148;
+    border-radius: 6px;
+    color: #e2e8f0;
+    padding: 8px 10px;
+    font-size: 13px;
+    width: 100%;
+  }
+  .form-row input:focus, .form-row select:focus {
+    outline: none;
+    border-color: #2563eb;
+  }
+  .schedule-hint { font-size: 11px; color: #475569; margin-top: 2px; }
+  .toggle-row { display: flex; align-items: center; gap: 10px; }
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider {
+    position: absolute;
+    inset: 0;
+    background: #374151;
+    border-radius: 20px;
+    transition: .2s;
+  }
+  .toggle .slider:before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    left: 3px; top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .2s;
+  }
+  .toggle input:checked + .slider { background: #2563eb; }
+  .toggle input:checked + .slider:before { transform: translateX(16px); }
+
+  /* ── 右侧：日志 + 历史 ── */
+  .right-panel {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 0;
+  }
+
+  .log-card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .log-header h2 { margin-bottom: 0; }
+  .log-run-info { font-size: 12px; color: #475569; }
+
+  .log-box {
+    flex: 1;
+    background: #0a0c14;
+    border: 1px solid #1e2236;
+    border-radius: 8px;
+    overflow-y: auto;
+    padding: 14px 16px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    min-height: 300px;
+  }
+  .log-line { white-space: pre-wrap; word-break: break-all; }
+  .log-line.ok    { color: #4ade80; }
+  .log-line.fail  { color: #f87171; }
+  .log-line.warn  { color: #fbbf24; }
+  .log-line.info  { color: #60a5fa; }
+  .log-line.dim   { color: #475569; }
+  .log-line.bold  { color: #e2e8f0; font-weight: 600; }
+  .log-empty { color: #374151; font-style: italic; }
+
+  /* ── 历史列表 ── */
+  .history-card { flex: 0 0 auto; max-height: 260px; overflow: hidden; display: flex; flex-direction: column; }
+  .history-list { overflow-y: auto; flex: 1; }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .1s;
+    border-bottom: 1px solid #1e2236;
+  }
+  .history-item:hover { background: #232639; }
+  .history-item:last-child { border-bottom: none; }
+  .run-status {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .run-status.passed  { background: #22c55e; }
+  .run-status.failed  { background: #ef4444; }
+  .run-status.running { background: #f59e0b; animation: pulse 1s infinite; }
+  .run-time { font-size: 12px; color: #94a3b8; flex: 1; }
+  .run-stats { font-size: 11px; color: #64748b; }
+  .run-stats .p { color: #4ade80; }
+  .run-stats .f { color: #f87171; }
+  .run-duration { font-size: 11px; color: #475569; }
+
+  .empty-history { color: #374151; font-size: 13px; text-align: center; padding: 20px; }
+
+  /* ── 弹窗（report 详情）── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #1a1d27;
+    border: 1px solid #2d3148;
+    border-radius: 14px;
+    width: 90vw;
+    max-width: 900px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid #2d3148;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .modal-header h3 { font-size: 15px; flex: 1; }
+  .modal-close {
+    background: none; border: none; color: #64748b;
+    cursor: pointer; font-size: 20px; line-height: 1;
+    padding: 0 4px;
+  }
+  .modal-close:hover { color: #e2e8f0; }
+  .modal-stats {
+    padding: 16px 24px;
+    display: flex;
+    gap: 24px;
+    border-bottom: 1px solid #2d3148;
+    flex-wrap: wrap;
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 2px; }
+  .stat-label { font-size: 11px; color: #64748b; }
+  .stat-value { font-size: 16px; font-weight: 600; }
+  .stat-value.green { color: #4ade80; }
+  .stat-value.red   { color: #f87171; }
+  .stat-value.yellow{ color: #fbbf24; }
+  .modal-logs {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    background: #0a0c14;
+    margin: 0 24px 24px;
+    border-radius: 8px;
+    border: 1px solid #1e2236;
+  }
+
+  /* ── 通知 toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #1a1d27;
+    border: 1px solid #2d3148;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 13px;
+    display: none;
+    z-index: 200;
+    box-shadow: 0 8px 30px rgba(0,0,0,.4);
+  }
+  .toast.show { display: block; animation: slideIn .2s ease; }
+  @keyframes slideIn { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .toast.ok { border-color: #16a34a; }
+  .toast.err { border-color: #dc2626; }
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:20px">🧪</span>
+  <h1>CRM 自动化测试平台</h1>
+  <span class="badge">Beta</span>
+  <span class="status-text" id="headerStatus">空闲</span>
+  <div class="status-dot" id="headerDot"></div>
+</header>
+
+<main>
+  <!-- ── Testcase ── -->
+  <div class="card tc-card">
+    <h2>Test Case</h2>
+    <div class="tc-name" id="tcName">CRM 完整销售流程</div>
+    <div class="tc-desc" id="tcDesc">语音线索 → 客户档案 → 商机转化 → 报价（审批）→ 赢单推进（审批）→ 合同生效</div>
+    <div class="tc-meta">
+      <span><strong>步骤数：</strong><span id="tcSteps">—</span></span>
+      <span><strong>执行账号：</strong>xuanyu.lu@bizops.com.cn</span>
+      <span><strong>审批账号：</strong>593969718@qq.com</span>
+      <span><strong>目标系统：</strong>bot.ceta.crm.duxing.cn</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnRun" onclick="startRun()">
+        ▶ 立即运行
+      </button>
+    </div>
+  </div>
+
+  <!-- ── 定时配置 ── -->
+  <div class="card schedule-card">
+    <h2>定时运行</h2>
+    <div class="schedule-form">
+      <div class="toggle-row">
+        <label class="toggle">
+          <input type="checkbox" id="schedEnabled" onchange="scheduleChanged()">
+          <span class="slider"></span>
+        </label>
+        <span id="schedToggleLabel" style="font-size:13px;color:#94a3b8">已禁用</span>
+      </div>
+
+      <div class="form-row">
+        <label>快捷选择</label>
+        <select id="schedPreset" onchange="presetChanged()">
+          <option value="">-- 选择预设 --</option>
+          <option value="0 8 * * *">每天 08:00</option>
+          <option value="0 9 * * 1-5">工作日 09:00</option>
+          <option value="0 * * * *">每小时</option>
+          <option value="*/30 * * * *">每30分钟</option>
+          <option value="custom">自定义</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label>Cron 表达式</label>
+        <input type="text" id="schedCron" value="0 8 * * *" placeholder="0 8 * * *">
+        <div class="schedule-hint">格式：分 时 日 月 周</div>
+      </div>
+
+      <button class="btn btn-secondary" onclick="saveSchedule()">保存定时配置</button>
+    </div>
+  </div>
+
+  <!-- ── 右侧面板 ── -->
+  <div class="right-panel">
+    <!-- 实时日志 -->
+    <div class="card log-card">
+      <div class="log-header">
+        <h2>运行日志</h2>
+        <span class="log-run-info" id="logRunInfo">—</span>
+      </div>
+      <div class="log-box" id="logBox">
+        <span class="log-empty">点击「立即运行」开始测试...</span>
+      </div>
+    </div>
+
+    <!-- 历史记录 -->
+    <div class="card history-card">
+      <h2>运行历史</h2>
+      <div class="history-list" id="historyList">
+        <div class="empty-history">暂无运行记录</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ── Report 弹窗 ── -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">运行报告</h3>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-stats" id="modalStats"></div>
+    <div class="modal-logs" id="modalLogs"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ──────────────────────────────────────────
+// 状态
+// ──────────────────────────────────────────
+let currentRunId = null;
+let sseSource = null;
+
+// ──────────────────────────────────────────
+// 初始化
+// ──────────────────────────────────────────
+async function init() {
+  await loadTestcase();
+  await loadHistory();
+  await loadSchedule();
+  await checkStatus();
+}
+
+async function loadTestcase() {
+  const data = await apiFetch('/api/testcase');
+  if (data) {
+    document.getElementById('tcName').textContent = data.name;
+    document.getElementById('tcDesc').textContent = data.description;
+    document.getElementById('tcSteps').textContent = data.steps + ' 步';
+  }
+}
+
+async function checkStatus() {
+  const data = await apiFetch('/api/status');
+  if (data && data.running) {
+    setRunning(true, data.currentRunId);
+    attachSSE(data.currentRunId);
+  }
+}
+
+// ──────────────────────────────────────────
+// 运行测试
+// ──────────────────────────────────────────
+async function startRun() {
+  const res = await fetch('/api/run', { method: 'POST' });
+  const data = await res.json();
+
+  if (!res.ok) {
+    return showToast(data.error, 'err');
+  }
+
+  currentRunId = data.runId;
+  setRunning(true, currentRunId);
+  clearLog();
+  appendLog(`⏳ 测试已启动，runId: ${data.runId}`, 'info');
+  attachSSE(data.runId);
+  await loadHistory();
+}
+
+function attachSSE(runId) {
+  if (sseSource) { sseSource.close(); sseSource = null; }
+
+  sseSource = new EventSource(`/api/stream/${runId}`);
+
+  sseSource.addEventListener('log', (e) => {
+    const { line } = JSON.parse(e.data);
+    appendLog(line);
+  });
+
+  sseSource.addEventListener('done', (e) => {
+    const stats = JSON.parse(e.data);
+    appendLog('', 'dim');
+    appendLog(`─────────────────────────────────────────`, 'dim');
+    const icon = stats.failed > 0 ? '❌' : '✅';
+    appendLog(`${icon}  通过: ${stats.passed}  失败: ${stats.failed}  耗时: ${stats.duration}`, stats.failed > 0 ? 'fail' : 'ok');
+    appendLog(`─────────────────────────────────────────`, 'dim');
+    setRunning(false);
+    loadHistory();
+    sseSource.close();
+    sseSource = null;
+  });
+
+  sseSource.onerror = () => {
+    sseSource.close();
+    sseSource = null;
+    setRunning(false);
+  };
+}
+
+// ──────────────────────────────────────────
+// 日志渲染
+// ──────────────────────────────────────────
+function clearLog() {
+  document.getElementById('logBox').innerHTML = '';
+}
+
+function appendLog(line, forceClass) {
+  const box = document.getElementById('logBox');
+  const div = document.createElement('div');
+  div.className = 'log-line ' + (forceClass || classifyLine(line));
+  div.textContent = line;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function classifyLine(line) {
+  if (!line.trim()) return 'dim';
+  if (line.includes('✅') || /\bok\b/.test(line)) return 'ok';
+  if (line.includes('❌') || /failed/.test(line)) return 'fail';
+  if (line.includes('⚠️') || line.includes('[stderr]')) return 'warn';
+  if (line.includes('🎉')) return 'ok';
+  if (line.startsWith('⏳') || line.startsWith('📋') || line.startsWith('📦')) return 'info';
+  if (line.startsWith('─')) return 'dim';
+  return 'log-line';
+}
+
+// ──────────────────────────────────────────
+// 状态控制
+// ──────────────────────────────────────────
+function setRunning(running, runId) {
+  const btn = document.getElementById('btnRun');
+  const dot = document.getElementById('headerDot');
+  const statusText = document.getElementById('headerStatus');
+  const logRunInfo = document.getElementById('logRunInfo');
+
+  btn.disabled = running;
+  btn.textContent = running ? '⏳ 运行中...' : '▶ 立即运行';
+  dot.className = 'status-dot' + (running ? ' running' : '');
+  statusText.textContent = running ? '运行中' : '空闲';
+  if (runId) {
+    const ts = new Date(parseInt(runId.replace('run_', ''))).toLocaleString('zh-CN');
+    logRunInfo.textContent = `Run: ${ts}`;
+  }
+}
+
+// ──────────────────────────────────────────
+// 历史记录
+// ──────────────────────────────────────────
+async function loadHistory() {
+  const history = await apiFetch('/api/history');
+  if (!history) return;
+
+  const list = document.getElementById('historyList');
+
+  if (history.length === 0) {
+    list.innerHTML = '<div class="empty-history">暂无运行记录</div>';
+    return;
+  }
+
+  list.innerHTML = history.slice(0, 20).map(run => {
+    const ts = new Date(run.startTime).toLocaleString('zh-CN');
+    const statsHtml = run.status === 'running'
+      ? '<span style="color:#f59e0b">运行中...</span>'
+      : `<span class="p">✅ ${run.passed}</span> <span class="f">❌ ${run.failed}</span>`;
+
+    return `
+      <div class="history-item" onclick="showReport('${run.id}')">
+        <div class="run-status ${run.status}"></div>
+        <div class="run-time">${ts}</div>
+        <div class="run-stats">${statsHtml}</div>
+        <div class="run-duration">${run.duration || '—'}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ──────────────────────────────────────────
+// Report 弹窗
+// ──────────────────────────────────────────
+async function showReport(runId) {
+  const run = await apiFetch(`/api/history/${runId}`);
+  if (!run) return;
+
+  const ts = new Date(run.startTime).toLocaleString('zh-CN');
+  document.getElementById('modalTitle').textContent = `运行报告 — ${ts}`;
+
+  const statusColor = run.status === 'passed' ? 'green' : run.status === 'failed' ? 'red' : 'yellow';
+  const statusText = run.status === 'passed' ? '✅ 通过' : run.status === 'failed' ? '❌ 失败' : '⏳ 运行中';
+
+  document.getElementById('modalStats').innerHTML = `
+    <div class="stat-item"><div class="stat-label">状态</div><div class="stat-value ${statusColor}">${statusText}</div></div>
+    <div class="stat-item"><div class="stat-label">通过</div><div class="stat-value green">${run.passed}</div></div>
+    <div class="stat-item"><div class="stat-label">失败</div><div class="stat-value red">${run.failed}</div></div>
+    <div class="stat-item"><div class="stat-label">跳过</div><div class="stat-value">${run.skipped}</div></div>
+    <div class="stat-item"><div class="stat-label">耗时</div><div class="stat-value">${run.duration || '—'}</div></div>
+    <div class="stat-item"><div class="stat-label">开始时间</div><div class="stat-value" style="font-size:13px">${ts}</div></div>
+  `;
+
+  const logsHtml = (run.logs || []).map(line => {
+    const cls = classifyLine(line);
+    return `<div class="log-line ${cls}">${escapeHtml(line)}</div>`;
+  }).join('');
+  document.getElementById('modalLogs').innerHTML = logsHtml || '<span class="log-empty">无日志</span>';
+
+  document.getElementById('modalOverlay').classList.add('open');
+
+  // 滚到底
+  setTimeout(() => {
+    const ml = document.getElementById('modalLogs');
+    ml.scrollTop = ml.scrollHeight;
+  }, 50);
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ──────────────────────────────────────────
+// 定时配置
+// ──────────────────────────────────────────
+async function loadSchedule() {
+  const data = await apiFetch('/api/schedule');
+  if (!data) return;
+  document.getElementById('schedEnabled').checked = data.enabled;
+  document.getElementById('schedCron').value = data.cron;
+  updateToggleLabel(data.enabled);
+}
+
+function scheduleChanged() {
+  const enabled = document.getElementById('schedEnabled').checked;
+  updateToggleLabel(enabled);
+}
+
+function updateToggleLabel(enabled) {
+  document.getElementById('schedToggleLabel').textContent = enabled ? '已启用' : '已禁用';
+}
+
+function presetChanged() {
+  const val = document.getElementById('schedPreset').value;
+  if (val && val !== 'custom') {
+    document.getElementById('schedCron').value = val;
+  }
+}
+
+async function saveSchedule() {
+  const enabled = document.getElementById('schedEnabled').checked;
+  const cron = document.getElementById('schedCron').value.trim();
+
+  const res = await fetch('/api/schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled, cron })
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    return showToast(data.error, 'err');
+  }
+  showToast(enabled ? `✅ 定时任务已启用：${cron}` : '定时任务已禁用', 'ok');
+}
+
+// ──────────────────────────────────────────
+// 工具函数
+// ──────────────────────────────────────────
+async function apiFetch(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// 定期刷新历史（轮询）
+setInterval(loadHistory, 5000);
+
+init();
+</script>
+</body>
+</html>

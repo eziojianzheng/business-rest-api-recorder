@@ -1,0 +1,13 @@
+{
+  "name": "crm-test-platform",
+  "version": "1.0.0",
+  "description": "CRM 自动化测试平台 - Web 界面管理 Playwright 测试",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-cron": "^3.0.3"
+  }
+}

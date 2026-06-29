@@ -1,0 +1,4 @@
+node_modules/
+run-history.json
+schedule.json
+test-results/
