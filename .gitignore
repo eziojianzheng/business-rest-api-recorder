@@ -23,29 +23,31 @@ npm-debug.log*
 .env.local
 .env.*.local
 
-# Test results (keep structure, ignore content)
-ui-recorder-electron/test-results/*.xml
-ui-recorder-electron/test-results/*.zip
+# ── ui-recorder-workspace：运行时数据，全部忽略 ──
+ui-recorder-workspace/
 
-# Temporary files
-*.tmp
-*.temp
-
-# Kiro workspace temp files
-ui-recorder-workspace/*.har
-ui-recorder-workspace/network.har
-
-# Excel files (user data)
-*.xlsx
-
-# Test output files
-test-output.txt
-test-error.txt
-test-results/
+# ── ui-recorder-electron：调试临时脚本忽略，只保留工具代码 ──
+ui-recorder-electron/test-results/
 ui-recorder-electron/test-output.txt
 ui-recorder-electron/test-err.txt
 ui-recorder-electron/test-out.txt
-ui-recorder-electron/replay-api-test.spec.js
+ui-recorder-electron/replay-*.spec.js
+ui-recorder-electron/simple-test.spec.js
+ui-recorder-electron/quick-test.spec.js
+ui-recorder-electron/test-api.spec.js
+ui-recorder-electron/test-server/
+ui-recorder-electron/.last-run.json
 
-# Last run info
-.last-run.json
+# ── crm-test-platform：运行时产生的数据忽略 ──
+crm-test-platform/run-history.json
+crm-test-platform/schedule.json
+crm-test-platform/node_modules/
+
+# 根目录调试脚本
+parse_har.js
+parse_har.py
+
+# Excel / temp
+*.xlsx
+*.tmp
+*.temp
