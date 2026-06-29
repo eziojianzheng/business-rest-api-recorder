@@ -153,8 +153,18 @@ function restoreSchedule() {
   }
 }
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   restoreSchedule();
   console.log(`\n🚀 CRM 自动化测试平台已启动`);
   console.log(`   访问地址: http://localhost:${PORT}\n`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ 端口 ${PORT} 已被占用，请先关闭其他占用该端口的程序后重试。`);
+    console.error(`   可在任务管理器中查找占用 ${PORT} 端口的进程并结束它。\n`);
+  } else {
+    console.error('\n❌ 服务器启动失败:', err.message);
+  }
+  process.exit(1);
 });
