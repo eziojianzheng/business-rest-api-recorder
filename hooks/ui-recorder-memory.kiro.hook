@@ -1,0 +1,13 @@
+{
+  "name": "UI Recorder: 更新项目记忆",
+  "version": "1.0.0",
+  "description": "当 API 测试脚本被修改后，自动提取关键信息并更新 memory.md",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["**/api-script.spec.js"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "api-script.spec.js 刚被更新。请读取 ui-recorder-workspace/api-script.spec.js，提取以下信息并追加/更新到 ui-recorder-workspace/memory.md：\n1. BASE_URL（如有变化）\n2. 测试账号信息（TEST_USER 对象）\n3. 所有 API 接口（方法、路径）\n4. 脚本中的注释里提到的已知问题或待办事项\n5. 在「脚本生成历史」表格追加一条记录（时间用今天日期）\n\n只更新有变化的部分，不要删除 memory.md 中已有的历史记录。"
+  }
+}

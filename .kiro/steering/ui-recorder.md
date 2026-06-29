@@ -25,7 +25,18 @@ discloseContext(name: "ui-recorder")
 | `ui-recorder-workspace/debug-context.md` | 当前调试上下文 |
 | `ui-recorder-workspace/semantic-context.md` | 语义脚本生成请求（含 UI 脚本和 API 列表） |
 | `ui-recorder-workspace/semantic-script.md` | 语义脚本输出文件（Kiro 写入这里） |
+| `ui-recorder-workspace/memory.md` | **项目记忆文件**（跨会话持久化上下文） |
 | `skills/ui-recorder/SKILL.md` | 调试工作流 SKILL |
+
+## 📚 记忆机制
+
+**每次开始任务前**，必须先读取 `ui-recorder-workspace/memory.md`，从中获取：
+- 项目 BASE_URL 和环境信息
+- 测试账号（避免重复询问用户）
+- 已知接口列表（避免重复分析）
+- 历史问题和经验（避免重复踩坑）
+
+**每次完成脚本生成后**，如果发现新的信息（新账号、新接口、新问题），主动更新 `memory.md` 对应部分。不要删除已有的历史记录，只追加或更新变化的部分。
 
 ## 语义脚本生成
 
