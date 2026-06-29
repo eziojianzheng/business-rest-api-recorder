@@ -102,9 +102,14 @@ function runTests() {
 
   const env = { ...process.env };
 
+  const args = [PLAYWRIGHT_CLI, 'test', '--reporter=list', '--config', PLAYWRIGHT_CONFIG];
+  console.log('[runner] execPath:', process.execPath);
+  console.log('[runner] args:', args.join(' '));
+  console.log('[runner] cwd:', __dirname);
+
   const child = spawn(
     process.execPath,   // 当前 Node.js 可执行文件
-    [PLAYWRIGHT_CLI, 'test', SPEC_FILE, '--reporter=list', '--config', PLAYWRIGHT_CONFIG],
+    args,
     {
       cwd: __dirname,
       env,

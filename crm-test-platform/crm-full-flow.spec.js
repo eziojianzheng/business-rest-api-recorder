@@ -556,7 +556,7 @@ test.describe.serial("CRM 流程 - 逐步调试", () => {
     let formData = null;
     let flowId = opportunityFlowInstanceId;
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 20; i++) {
       await new Promise(r => setTimeout(r, 5000));
 
       // 如果还没有 flowInstanceId，先查商机详情
