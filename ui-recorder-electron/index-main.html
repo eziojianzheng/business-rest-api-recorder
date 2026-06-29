@@ -197,6 +197,7 @@
       <button class="btn-green" id="btn-start-record" onclick="confirmStartRecording()">▶ 开始录制</button>
         <button class="btn-blue" id="btn-continue-record" onclick="continueRecording()" style="background:#1976d2;">▶ 继续录制</button>
       <button class="btn-red" id="btn-stop-record" onclick="stopRecording()" disabled>⏹ 停止录制</button>
+      <button onclick="clearHar()" style="background:#5d2c00;color:#ffa726;border:1px solid #ffa726;border-radius:4px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;" title="清除 network.har 文件和 API 列表">🗑 清除 HAR</button>
       <span id="record-status" style="font-size:12px;color:#888;"></span>
     </div>
     <div class="two-col">
@@ -736,6 +737,27 @@ function stopReplay() {
   document.getElementById('btn-stop-replay-api').disabled = true;
   replayActive = false;
 }
+
+// ── Clear HAR ─────────────────────────────────────────────────────────────────
+function clearHar() {
+  if (!confirm('⚠️ 确定要清除 HAR 文件吗？\n\n这将删除 network.har 并清空 API 列表，但不会影响 UI 脚本和其他文件。')) return;
+
+  ipcRenderer.send('clear-har');
+}
+
+ipcRenderer.on('har-cleared', (e, data) => {
+  if (data.success) {
+    document.getElementById('api-list').innerHTML = '<div class="empty-state">HAR 已清除</div>';
+    document.getElementById('api-count').textContent = '0';
+    document.getElementById('record-status').textContent = '✓ HAR 已清除';
+    document.getElementById('record-status').style.color = '#4caf50';
+    setTimeout(() => {
+      document.getElementById('record-status').textContent = '';
+    }, 2000);
+  } else {
+    alert('清除失败: ' + data.msg);
+  }
+});
 
 ipcRenderer.on('replay-log', (e, data) => {
   const log = document.getElementById('replay-api-log');

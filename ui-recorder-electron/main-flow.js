@@ -591,6 +591,42 @@ ipcMain.on('stop-replay', (event) => {
     event.reply('replay-stopped', {});
 });
 
+// ── Clear HAR ─────────────────────────────────────────────────────────────────
+ipcMain.on('clear-har', (event) => {
+    if (!session || !session.dir) {
+        event.reply('har-cleared', { success: false, msg: '没有活跃的会话' });
+        return;
+    }
+
+    // 如果录制进程还在运行，先停止它
+    if (codegenProcess) {
+        codegenProcess.kill();
+        codegenProcess = null;
+    }
+
+    const harFile = path.join(session.dir, 'network.har');
+    try {
+        if (fs.existsSync(harFile)) {
+            // Windows 下文件可能被锁定，先尝试清空内容再删除
+            try {
+                fs.writeFileSync(harFile, '', 'utf-8');
+                fs.unlinkSync(harFile);
+            } catch (lockErr) {
+                // 如果删不掉，就清空内容（让它变成空 HAR）
+                const emptyHar = JSON.stringify({ log: { version: '1.2', entries: [] } });
+                fs.writeFileSync(harFile, emptyHar, 'utf-8');
+                console.log('[Clear HAR] 文件被锁定，已清空内容');
+            }
+        }
+        // 清空内存中的 harApis
+        session.harApis = [];
+        event.reply('har-cleared', { success: true, msg: 'HAR 已清除' });
+    } catch (err) {
+        console.error('[Clear HAR] 操作失败:', err);
+        event.reply('har-cleared', { success: false, msg: '操作失败: ' + err.message });
+    }
+});
+
 // ── Update UI script (from Kiro AI edits) ────────────────────────────────────
 ipcMain.on('update-ui-script', (event, script) => {
     session.uiScript = script;
