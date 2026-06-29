@@ -1447,23 +1447,45 @@ ipcMain.on('get-session', (event) => {
             console.log('[get-session] Restored apiScript from disk');
         }
         if ((!session.harApis || session.harApis.length === 0) && fs.existsSync(harPath)) {
-            try {
-                const harSize = fs.statSync(harPath).size;
-                if (harSize < 50 * 1024 * 1024) { // 只加载 50MB 以内的 HAR
-                    const har = JSON.parse(fs.readFileSync(harPath, 'utf-8'));
-                    session.harApis = (har.log?.entries || []).map(e => ({
-                        method: e.request.method,
-                        url: e.request.url,
-                        status: e.response.status,
-                        mimeType: e.response.content?.mimeType || ''
-                    }));
-                    console.log(`[get-session] Restored ${session.harApis.length} HAR entries from disk`);
-                } else {
-                    console.log('[get-session] HAR file too large (>50MB), skip loading');
+            // 用子进程异步解析 HAR，避免阻塞主进程
+            const harSize = fs.statSync(harPath).size;
+            console.log(`[get-session] Parsing HAR (${(harSize / 1024 / 1024).toFixed(1)}MB) in background...`);
+
+            const parseScript = `
+                const fs = require('fs');
+                const content = fs.readFileSync(process.argv[1], 'utf-8');
+                const pattern = /"method"\\s*:\\s*"([^"]+)"[^}]{0,300}?"url"\\s*:\\s*"([^"]+)"/g;
+                const apis = [];
+                let m;
+                while ((m = pattern.exec(content)) !== null) {
+                    const url = m[2];
+                    if (url.includes('/api/') && !url.match(/\\.(js|css|png|jpg|svg|ico|woff|ttf)(\\?|$)/)) {
+                        apis.push({ method: m[1], url, status: 200, mimeType: 'application/json' });
+                    }
                 }
-            } catch (e) {
-                console.warn('[get-session] Failed to parse HAR:', e.message);
-            }
+                process.stdout.write(JSON.stringify(apis));
+            `;
+            const tmpScript = path.join(session.dir, '_parse_har_tmp.js');
+            fs.writeFileSync(tmpScript, parseScript);
+
+            const { execFile } = require('child_process');
+            execFile(process.execPath, [tmpScript, harPath], { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+                try { fs.unlinkSync(tmpScript); } catch {}
+                if (!err && stdout) {
+                    try {
+                        session.harApis = JSON.parse(stdout);
+                        console.log(`[get-session] HAR parsed: ${session.harApis.length} API entries`);
+                        // 通知前端更新 API 列表
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.webContents.send('har-apis-loaded', session.harApis);
+                        }
+                    } catch (e2) {
+                        console.warn('[get-session] HAR parse result error:', e2.message);
+                    }
+                } else if (err) {
+                    console.warn('[get-session] HAR parse failed:', err.message);
+                }
+            });
         }
     }
     event.reply('session-info', session);

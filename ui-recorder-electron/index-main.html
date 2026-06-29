@@ -695,6 +695,15 @@ ipcRenderer.on('session-info', (e, session) => {
   }
 });
 
+// HAR 异步解析完成后更新 API 列表
+ipcRenderer.on('har-apis-loaded', (e, apis) => {
+  renderApiList(apis || []);
+  if (apis && apis.length > 0) {
+    document.getElementById('session-info').textContent = '已恢复上次 session';
+    sessionCreated = true;
+  }
+});
+
 function renderApiList(apis) {
   const businessApis = apis.filter(a => {
     const u = (a.url || '').toLowerCase();
