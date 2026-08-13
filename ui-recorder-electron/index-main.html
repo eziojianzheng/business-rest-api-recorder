@@ -187,7 +187,7 @@
   <!-- ══ Step 1: 录制 ══ -->
   <div class="step-panel" id="panel-1">
     <div class="info-banner">
-      <span>ℹ️</span>使用 Playwright Inspector 录制操作，完成后关闭 Inspector 窗口即可自动保存脚本和 API
+      <span>ℹ️</span>“开始录制 / 继续录制”会生成 UI 脚本和 HAR；“仅 HAR”使用最大化普通浏览器，不显示 Inspector 或控件属性浮层。
     </div>
     <div class="controls">
       <span style="color:#888;font-size:12px;white-space:nowrap;">目标 URL：</span>
@@ -195,7 +195,9 @@
              placeholder="https://example.com"
              value="http://localhost:9220/ui/login/basic?auth=basic">
       <button class="btn-green" id="btn-start-record" onclick="confirmStartRecording()">▶ 开始录制</button>
-        <button class="btn-blue" id="btn-continue-record" onclick="continueRecording()" style="background:#1976d2;">▶ 继续录制</button>
+      <button class="btn-blue" id="btn-continue-record" onclick="continueRecording()" style="background:#1976d2;">▶ 继续录制</button>
+      <button class="btn-blue" id="btn-start-har" onclick="confirmStartHarRecording()" style="background:#00838f;">🌐 开始仅 HAR</button>
+      <button class="btn-blue" id="btn-continue-har" onclick="continueHarRecording()" style="background:#006064;">🌐 继续仅 HAR</button>
       <button class="btn-red" id="btn-stop-record" onclick="stopRecording()" disabled>⏹ 停止录制</button>
       <button onclick="clearHar()" style="background:#5d2c00;color:#ffa726;border:1px solid #ffa726;border-radius:4px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;" title="清除 network.har 文件和 API 列表">🗑 清除 HAR</button>
       <span id="record-status" style="font-size:12px;color:#888;"></span>
@@ -566,6 +568,53 @@ ipcRenderer.on('session-created', (e, data) => {
     startRecording();
   }
 
+  function setRecordingButtons(active) {
+    document.getElementById('btn-start-record').disabled = active;
+    document.getElementById('btn-continue-record').disabled = active;
+    document.getElementById('btn-start-har').disabled = active;
+    document.getElementById('btn-continue-har').disabled = active;
+    document.getElementById('btn-stop-record').disabled = !active;
+  }
+
+  function startHarRecording(continueMode) {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url || url === 'https://') {
+      alert('请输入有效的 URL');
+      return;
+    }
+
+    if (!continueMode) {
+      const hasData = document.getElementById('ui-script-edit')?.value?.trim() ||
+                      document.getElementById('semantic-script-edit')?.value?.trim() ||
+                      document.getElementById('api-script-edit')?.value?.trim() ||
+                      Number(document.getElementById('api-count')?.textContent || 0) > 0;
+      if (hasData && !confirm('⚠️ 开始仅 HAR 会清空当前脚本和 HAR。\n\n建议先保存当前会话。确定继续吗？')) return;
+    }
+
+    ensureSession(url);
+    setRecordingButtons(true);
+    recordingActive = true;
+    document.getElementById('record-status').textContent = continueMode
+      ? '⏺ 正在启动最大化浏览器（继续仅 HAR）...'
+      : '⏺ 正在启动最大化浏览器（开始仅 HAR）...';
+    document.getElementById('record-status').style.color = '#ef5350';
+
+    if (!continueMode) {
+      document.getElementById('api-list').innerHTML = '<div class="empty-state">等待 API 请求...</div>';
+      document.getElementById('api-count').textContent = '0';
+      document.getElementById('ui-script-preview').value = '';
+    }
+    ipcRenderer.send('start-har-recording', { url, continueMode });
+  }
+
+  function confirmStartHarRecording() {
+    startHarRecording(false);
+  }
+
+  function continueHarRecording() {
+    startHarRecording(true);
+  }
+
   // 继续录制（不清空数据）
   function continueRecording() {
     const url = document.getElementById('url-input').value.trim();
@@ -610,33 +659,36 @@ function startRecording() {
 }
 
 ipcRenderer.on('recording-started', (e, data) => {
-  // 清空所有脚本显示（开始新录制）
-  document.getElementById('semantic-script-edit').value = '';
-  document.getElementById('semantic-preview').innerHTML = '<p style="color:#666;">点击"生成语义脚本"按钮...</p>';
-  document.getElementById('api-script-preview').value = '';
-  document.getElementById('api-script-edit').value = '';
-  document.getElementById('semantic-status').textContent = '';
-  document.getElementById('api-gen-status').textContent = '';
-  
+  // 新录制清空后续脚本；继续录制保留当前内容。
+  if (!data.continueMode) {
+    document.getElementById('semantic-script-edit').value = '';
+    document.getElementById('semantic-preview').innerHTML = '<p style="color:#666;">点击"生成语义脚本"按钮...</p>';
+    document.getElementById('api-script-preview').value = '';
+    document.getElementById('api-script-edit').value = '';
+    document.getElementById('semantic-status').textContent = '';
+    document.getElementById('api-gen-status').textContent = '';
+  }
+
   if (data.url) {
-    document.getElementById('record-status').textContent = '⏺ Playwright Inspector 已启动，请在浏览器中操作';
+    document.getElementById('record-status').textContent = data.mode === 'har-only'
+      ? `⏺ ${data.continueMode ? '继续' : '开始'}仅 HAR 录制中；操作完成后返回此处点击“停止录制”`
+      : '⏺ Playwright Inspector 已启动，请在浏览器中操作';
   }
 });
 
 ipcRenderer.on('recording-done', (e, data) => {
   recordingActive = false;
-  document.getElementById('btn-start-record').disabled = false;
-  document.getElementById('btn-continue-record').disabled = false;
-  document.getElementById('btn-stop-record').disabled = true;
-  document.getElementById('record-status').textContent = `✓ 录制完成 — ${data.apiCount} 个 API`;
+  setRecordingButtons(false);
+  const modeLabel = data.mode === 'har-only'
+    ? `${data.continueMode ? '继续' : '开始'}仅 HAR 完成`
+    : '录制完成';
+  document.getElementById('record-status').textContent = `✓ ${modeLabel} — ${data.apiCount} 个请求`;
   document.getElementById('record-status').style.color = '#4caf50';
 
   if (data.uiScript) {
     document.getElementById('ui-script-preview').value = data.uiScript;
   }
   document.getElementById('btn-to-step2').disabled = false;
-  
-  // 更新最大到达步骤
   maxReachedStep = Math.max(maxReachedStep, 1);
 });
 
@@ -646,16 +698,20 @@ ipcRenderer.on('ui-script-updated', (e, script) => {
 
 function stopRecording() {
   ipcRenderer.send('stop-recording');
-  document.getElementById('btn-start-record').disabled = false;
-  document.getElementById('btn-continue-record').disabled = false;
-  document.getElementById('btn-continue-record').disabled = false;
   document.getElementById('btn-stop-record').disabled = true;
-  document.getElementById('record-status').textContent = '⏹ 已停止';
-  document.getElementById('record-status').style.color = '#888';
+  document.getElementById('record-status').textContent = '⏳ 正在停止并保存 HAR...';
+  document.getElementById('record-status').style.color = '#ffa726';
 }
 
 ipcRenderer.on('recording-stopped', () => {
-  // recording-done will fire from the process close event
+  // recording-done 会在录制资源关闭、HAR 完整落盘并解析后触发。
+});
+
+ipcRenderer.on('recording-error', (e, data) => {
+  recordingActive = false;
+  setRecordingButtons(false);
+  document.getElementById('record-status').textContent = `✗ 录制失败：${data.message || '未知错误'}`;
+  document.getElementById('record-status').style.color = '#ef5350';
 });
 
 // ── API List rendering ────────────────────────────────────────────────────────

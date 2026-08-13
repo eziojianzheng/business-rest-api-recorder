@@ -6,6 +6,73 @@ const fs = require('fs');
 let mainWindow;
 let codegenProcess = null;
 let replayProcess = null;
+let harOnlyRecording = null;
+let harOnlyFinalizing = false;
+
+function harEntriesToApis(entries) {
+    return entries.map(e => ({
+        method: e.request.method,
+        url: e.request.url,
+        status: e.response.status,
+        timestamp: e.startedDateTime,
+        postData: e.request.postData?.text || null,
+        response: e.response.content?.text || null,
+        mimeType: e.response.content?.mimeType || ''
+    }));
+}
+
+function readHar(harFile) {
+    if (!fs.existsSync(harFile)) return null;
+    return JSON.parse(fs.readFileSync(harFile, 'utf-8'));
+}
+
+function mergeHarFiles(targetFile, additionFile) {
+    const addition = readHar(additionFile);
+    if (!addition) return;
+    const existing = readHar(targetFile);
+    if (existing?.log?.entries) {
+        existing.log.entries.push(...(addition.log?.entries || []));
+        fs.writeFileSync(targetFile, JSON.stringify(existing, null, 2), 'utf-8');
+    } else {
+        fs.copyFileSync(additionFile, targetFile);
+    }
+}
+
+async function finishHarOnlyRecording() {
+    if (!harOnlyRecording || harOnlyFinalizing) return;
+    harOnlyFinalizing = true;
+    const recording = harOnlyRecording;
+    harOnlyRecording = null;
+
+    try {
+        await recording.context.close();
+        if (recording.browser.isConnected()) await recording.browser.close();
+
+        const targetHar = path.join(session.dir, 'network.har');
+        if (recording.continueMode) {
+            mergeHarFiles(targetHar, recording.harFile);
+            if (fs.existsSync(recording.harFile)) fs.unlinkSync(recording.harFile);
+        }
+
+        const har = readHar(targetHar);
+        session.harApis = harEntriesToApis(har?.log?.entries || []);
+        writeKiroContext();
+        mainWindow.webContents.send('recording-done', {
+            mode: 'har-only',
+            continueMode: recording.continueMode,
+            uiScript: session.uiScript,
+            apiCount: session.harApis.length
+        });
+    } catch (error) {
+        console.error('[HAR Only] 完成录制失败:', error);
+        mainWindow.webContents.send('recording-error', {
+            mode: 'har-only',
+            message: error.message
+        });
+    } finally {
+        harOnlyFinalizing = false;
+    }
+}
 
 // ── 辅助函数：运行 Node.js 脚本（不依赖系统 Node.js）────────────────────────
 function runNodeScript(scriptPath, args, options = {}) {
@@ -100,6 +167,11 @@ app.on('window-all-closed', () => {
 function cleanup() {
     if (codegenProcess) { codegenProcess.kill(); codegenProcess = null; }
     if (replayProcess)  { replayProcess.kill();  replayProcess = null; }
+    if (harOnlyRecording) {
+        harOnlyRecording.context.close().catch(() => {});
+        harOnlyRecording.browser.close().catch(() => {});
+        harOnlyRecording = null;
+    }
 }
 
 // ── Create session ────────────────────────────────────────────────────────────
@@ -467,6 +539,74 @@ ipcMain.on('start-recording', async (event, url) => {
 });
 
 
+// ── HAR-only recording (最大化普通浏览器，无 Inspector/控件属性浮层) ──────────
+ipcMain.on('start-har-recording', async (event, payload) => {
+    const { url, continueMode = false } = payload || {};
+    if (!url) {
+        event.reply('recording-error', { mode: 'har-only', message: '目标 URL 不能为空。' });
+        return;
+    }
+    if (codegenProcess || harOnlyRecording || harOnlyFinalizing) {
+        event.reply('recording-error', { mode: 'har-only', message: '已有录制正在运行，请先停止。' });
+        return;
+    }
+
+    session.url = url;
+    const targetHar = path.join(session.dir, 'network.har');
+    const harFile = continueMode
+        ? path.join(session.dir, `network-continue-${Date.now()}.har`)
+        : targetHar;
+
+    if (!continueMode) {
+        const filesToClean = [
+            'ui-script.js', 'network.har', 'semantic-script.md', 'api-script.spec.js',
+            'semantic-context.md', 'api-context.md', 'semantic-approved.flag', 'draft-state.json'
+        ];
+        filesToClean.forEach(fileName => {
+            const filePath = path.join(session.dir, fileName);
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        });
+        session.uiScript = '';
+        session.semanticScript = '';
+        session.apiScript = '';
+        session.harApis = [];
+        session.step = 'record';
+    }
+
+    try {
+        const { chromium } = require('playwright');
+        const browser = await chromium.launch({
+            channel: 'chrome',
+            headless: false,
+            args: ['--start-maximized']
+        });
+        const context = await browser.newContext({
+            viewport: null,
+            ignoreHTTPSErrors: true,
+            recordHar: { path: harFile, mode: 'full', content: 'embed' }
+        });
+        harOnlyRecording = { browser, context, harFile, continueMode };
+
+        const page = await context.newPage();
+        page.on('close', () => {
+            setTimeout(() => {
+                if (harOnlyRecording && context.pages().length === 0) finishHarOnlyRecording();
+            }, 100);
+        });
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        event.reply('recording-started', { mode: 'har-only', continueMode, url });
+    } catch (error) {
+        console.error('[HAR Only] 启动失败:', error);
+        if (harOnlyRecording) {
+            try { await harOnlyRecording.context.close(); } catch {}
+            try { await harOnlyRecording.browser.close(); } catch {}
+            harOnlyRecording = null;
+        }
+        if (continueMode && fs.existsSync(harFile)) fs.unlinkSync(harFile);
+        event.reply('recording-error', { mode: 'har-only', message: error.message });
+    }
+});
+
 // ── Continue recording (不清空数据) ──────────────────────────────────────────
 ipcMain.on('continue-recording', async (event, url) => {
     session.url = url;
@@ -531,9 +671,18 @@ ipcMain.on('continue-recording', async (event, url) => {
 });
 
 // ── Stop recording ────────────────────────────────────────────────────────────
-ipcMain.on('stop-recording', (event) => {
-    if (codegenProcess) { codegenProcess.kill(); codegenProcess = null; }
-    event.reply('recording-stopped', {});
+ipcMain.on('stop-recording', async (event) => {
+    if (harOnlyRecording || harOnlyFinalizing) {
+        await finishHarOnlyRecording();
+        event.reply('recording-stopped', { mode: 'har-only' });
+        return;
+    }
+    if (codegenProcess) {
+        const processToStop = codegenProcess;
+        codegenProcess = null;
+        processToStop.kill();
+    }
+    event.reply('recording-stopped', { mode: 'full' });
 });
 
 // ── Replay UI script ──────────────────────────────────────────────────────────
