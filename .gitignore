@@ -47,6 +47,14 @@ crm-test-platform/node_modules/
 parse_har.js
 parse_har.py
 
+# ── 非工具：验证 demo / 录制数据 / 其他 ──
+trace-demo/
+13点/
+FobiddienUpdate/
+_*.js
+_*.json
+_*.md
+
 # Excel / temp
 *.xlsx
 *.tmp

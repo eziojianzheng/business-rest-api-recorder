@@ -194,6 +194,9 @@
       <input type="text" class="url-input" id="url-input"
              placeholder="https://example.com"
              value="http://localhost:9220/ui/login/basic?auth=basic">
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:#4caf50;white-space:nowrap;cursor:pointer;" title="录制时同时开启 Playwright Trace，记录每一步操作前后的截图和 DOM 快照，供 AI 分析">
+        <input type="checkbox" id="chk-trace" checked style="cursor:pointer;">🎬 录屏(Trace)
+      </label>
       <button class="btn-green" id="btn-start-record" onclick="confirmStartRecording()">▶ 开始录制</button>
       <button class="btn-blue" id="btn-continue-record" onclick="continueRecording()" style="background:#1976d2;">▶ 继续录制</button>
       <button class="btn-blue" id="btn-start-har" onclick="confirmStartHarRecording()" style="background:#00838f;">🌐 开始仅 HAR</button>
@@ -644,10 +647,7 @@ function startRecording() {
 
   ensureSession(url);
 
-  document.getElementById('btn-start-record').disabled = true;
-  document.getElementById('btn-stop-record').disabled = false;
-  document.getElementById('record-status').textContent = '⏺ 录制中...';
-  document.getElementById('record-status').style.color = '#ef5350';
+  setRecordingButtons(true);
   recordingActive = true;
 
   // Clear previous data
@@ -655,7 +655,16 @@ function startRecording() {
   document.getElementById('api-count').textContent = '0';
   document.getElementById('ui-script-preview').value = '';
 
-  ipcRenderer.send('start-recording', url);
+  const traceEnabled = document.getElementById('chk-trace')?.checked;
+  if (traceEnabled) {
+    document.getElementById('record-status').textContent = '⏺ 录制中（含 Trace 录屏）...';
+    document.getElementById('record-status').style.color = '#ef5350';
+    ipcRenderer.send('start-trace-recording', { url });
+  } else {
+    document.getElementById('record-status').textContent = '⏺ 录制中...';
+    document.getElementById('record-status').style.color = '#ef5350';
+    ipcRenderer.send('start-recording', url);
+  }
 }
 
 ipcRenderer.on('recording-started', (e, data) => {
@@ -670,19 +679,30 @@ ipcRenderer.on('recording-started', (e, data) => {
   }
 
   if (data.url) {
-    document.getElementById('record-status').textContent = data.mode === 'har-only'
-      ? `⏺ ${data.continueMode ? '继续' : '开始'}仅 HAR 录制中；操作完成后返回此处点击“停止录制”`
-      : '⏺ Playwright Inspector 已启动，请在浏览器中操作';
+    if (data.mode === 'trace') {
+      document.getElementById('record-status').textContent = '⏺ 录制中（含 Trace 录屏）；在浏览器操作，完成后点击“停止录制”';
+    } else if (data.mode === 'har-only') {
+      document.getElementById('record-status').textContent = `⏺ ${data.continueMode ? '继续' : '开始'}仅 HAR 录制中；操作完成后返回此处点击“停止录制”`;
+    } else {
+      document.getElementById('record-status').textContent = '⏺ Playwright Inspector 已启动，请在浏览器中操作';
+    }
   }
 });
 
 ipcRenderer.on('recording-done', (e, data) => {
   recordingActive = false;
   setRecordingButtons(false);
-  const modeLabel = data.mode === 'har-only'
-    ? `${data.continueMode ? '继续' : '开始'}仅 HAR 完成`
-    : '录制完成';
-  document.getElementById('record-status').textContent = `✓ ${modeLabel} — ${data.apiCount} 个请求`;
+  let modeLabel;
+  if (data.mode === 'har-only') modeLabel = `${data.continueMode ? '继续' : '开始'}仅 HAR 完成`;
+  else if (data.mode === 'trace') modeLabel = '录制完成（含 Trace）';
+  else modeLabel = '录制完成';
+
+  let statusText = `✓ ${modeLabel} — ${data.apiCount} 个请求`;
+  if (data.mode === 'trace' && data.traceInfo) {
+    statusText += ` — 🪜 ${data.traceInfo.stepCount} 步操作，📸 ${data.traceInfo.screencastFrames} 帧`;
+    if (data.stepsDir) statusText += `（每步前后截图见 steps/ 目录）`;
+  }
+  document.getElementById('record-status').textContent = statusText;
   document.getElementById('record-status').style.color = '#4caf50';
 
   if (data.uiScript) {

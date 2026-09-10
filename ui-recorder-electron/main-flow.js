@@ -2,12 +2,14 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn, fork } = require('child_process');
 const fs = require('fs');
+const { buildSemanticInput } = require('./semantic-input-builder');
 
 let mainWindow;
 let codegenProcess = null;
 let replayProcess = null;
 let harOnlyRecording = null;
 let harOnlyFinalizing = false;
+let traceRecorderProcess = null;   // 真人 codegen + trace 录制子进程
 
 function harEntriesToApis(entries) {
     return entries.map(e => ({
@@ -24,6 +26,35 @@ function harEntriesToApis(entries) {
 function readHar(harFile) {
     if (!fs.existsSync(harFile)) return null;
     return JSON.parse(fs.readFileSync(harFile, 'utf-8'));
+}
+
+// 递归复制目录（用于 steps/ 等 trace 产物目录）
+function copyDirRecursive(srcDir, destDir) {
+    if (!fs.existsSync(srcDir)) return false;
+    fs.mkdirSync(destDir, { recursive: true });
+    for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+        const s = path.join(srcDir, entry.name);
+        const d = path.join(destDir, entry.name);
+        if (entry.isDirectory()) copyDirRecursive(s, d);
+        else fs.copyFileSync(s, d);
+    }
+    return true;
+}
+
+// 保存 trace 相关产物（trace.zip + steps 目录）到目标目录，返回已保存的标签列表
+function saveTraceArtifacts(srcDir, destDir) {
+    const saved = [];
+    const traceZip = path.join(srcDir, 'trace.zip');
+    if (fs.existsSync(traceZip)) {
+        fs.copyFileSync(traceZip, path.join(destDir, 'trace.zip'));
+        saved.push('Trace 录屏 (trace.zip)');
+    }
+    const stepsDir = path.join(srcDir, 'steps');
+    if (fs.existsSync(stepsDir)) {
+        copyDirRecursive(stepsDir, path.join(destDir, 'steps'));
+        saved.push('分步截图 (steps/)');
+    }
+    return saved;
 }
 
 function mergeHarFiles(targetFile, additionFile) {
@@ -166,6 +197,11 @@ app.on('window-all-closed', () => {
 
 function cleanup() {
     if (codegenProcess) { codegenProcess.kill(); codegenProcess = null; }
+    if (traceRecorderProcess) {
+        try { traceRecorderProcess.stdin.write('STOP\n'); } catch (e) {}
+        try { traceRecorderProcess.kill(); } catch (e) {}
+        traceRecorderProcess = null;
+    }
     if (replayProcess)  { replayProcess.kill();  replayProcess = null; }
     if (harOnlyRecording) {
         harOnlyRecording.context.close().catch(() => {});
@@ -430,6 +466,132 @@ function startWatchingApiDoc(filePath) {
 }
 
 
+// ── Start recording WITH trace (真人 codegen + trace，每步前后截图，无回放) ──
+ipcMain.on('start-trace-recording', async (event, payload) => {
+    const url = typeof payload === 'string' ? payload : payload?.url;
+    if (!url) {
+        event.reply('recording-error', { mode: 'trace', message: '目标 URL 不能为空。' });
+        return;
+    }
+    if (codegenProcess || harOnlyRecording || harOnlyFinalizing || traceRecorderProcess) {
+        event.reply('recording-error', { mode: 'trace', message: '已有录制正在运行，请先停止。' });
+        return;
+    }
+
+    session.url = url;
+    const outputFile = path.join(session.dir, 'ui-script.js');
+    const harFile    = path.join(session.dir, 'network.har');
+    const traceFile  = path.join(session.dir, 'trace.zip');
+    const shotsDir   = path.join(session.dir, 'trace-extracted');
+    const stepsDir   = path.join(session.dir, 'steps');
+
+    // 清空旧数据（与普通录制一致）
+    const filesToClean = [
+        'ui-script.js', 'network.har', 'trace.zip', 'semantic-script.md',
+        'api-script.spec.js', 'semantic-context.md', 'api-context.md',
+        'semantic-approved.flag', 'draft-state.json'
+    ];
+    filesToClean.forEach(fileName => {
+        const filePath = path.join(session.dir, fileName);
+        if (fs.existsSync(filePath)) { try { fs.unlinkSync(filePath); } catch (e) {} }
+    });
+    fs.rmSync(shotsDir, { recursive: true, force: true });
+    fs.rmSync(stepsDir, { recursive: true, force: true });
+
+    session.uiScript = '';
+    session.semanticScript = '';
+    session.apiScript = '';
+    session.harApis = [];
+    session.step = 'record';
+
+    mainWindow.webContents.send('recording-started', { url, mode: 'trace' });
+
+    const recorderScript = path.join(__dirname, 'trace-recorder.js');
+    // 注意：stdin 用 pipe，以便发送 STOP 信号
+    traceRecorderProcess = runNodeScript(
+        recorderScript,
+        [url, outputFile, harFile, traceFile, shotsDir, stepsDir],
+        { cwd: __dirname, windowsHide: false, stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+
+    traceRecorderProcess.stdout.on('data', d => {
+        const msg = d.toString().trim();
+        console.log('[TraceRec]', msg);
+        if (msg.includes('READY')) {
+            event.reply('recording-started', { status: 'success', mode: 'trace' });
+        }
+        // 实时同步脚本
+        if (fs.existsSync(outputFile)) {
+            const content = fs.readFileSync(outputFile, 'utf-8');
+            if (content !== session.uiScript) {
+                session.uiScript = content;
+                mainWindow.webContents.send('ui-script-updated', content);
+            }
+        }
+    });
+    traceRecorderProcess.stderr.on('data', d => console.error('[TraceRec]', d.toString().trim()));
+
+    // 定时同步脚本（用户操作产生的内容）
+    const watchInterval = setInterval(() => {
+        if (!fs.existsSync(outputFile)) return;
+        const content = fs.readFileSync(outputFile, 'utf-8');
+        if (content !== session.uiScript) {
+            session.uiScript = content;
+            mainWindow.webContents.send('ui-script-updated', content);
+        }
+    }, 1000);
+
+    traceRecorderProcess.on('close', code => {
+        clearInterval(watchInterval);
+        traceRecorderProcess = null;
+        console.log('[TraceRec] 子进程退出:', code);
+
+        if (fs.existsSync(outputFile)) session.uiScript = fs.readFileSync(outputFile, 'utf-8');
+
+        if (fs.existsSync(harFile)) {
+            try {
+                const har = JSON.parse(fs.readFileSync(harFile, 'utf-8'));
+                session.harApis = harEntriesToApis(har.log?.entries || []);
+            } catch (e) { console.error('[TraceRec] HAR 解析失败:', e); }
+        }
+
+        const traceInfo = summarizeTrace(shotsDir, stepsDir);
+        writeKiroContext();
+        mainWindow.webContents.send('recording-done', {
+            mode: 'trace',
+            uiScript: session.uiScript,
+            apiCount: session.harApis.length,
+            traceFile: fs.existsSync(traceFile) ? traceFile : null,
+            traceExtractedDir: fs.existsSync(shotsDir) ? shotsDir : null,
+            stepsDir: fs.existsSync(stepsDir) ? stepsDir : null,
+            traceInfo
+        });
+    });
+});
+
+// 汇总 trace 产物（截图帧数量、分步操作数等）
+function summarizeTrace(shotsDir, stepsDir) {
+    try {
+        const info = { screencastFrames: 0, resources: 0, stepCount: 0, hasTrace: false };
+        if (fs.existsSync(shotsDir)) {
+            const resources = path.join(shotsDir, 'resources');
+            if (fs.existsSync(resources)) {
+                const files = fs.readdirSync(resources);
+                info.resources = files.length;
+                info.screencastFrames = files.filter(f => f.endsWith('.jpeg')).length;
+            }
+            info.hasTrace = fs.existsSync(path.join(shotsDir, 'trace.trace'));
+        }
+        if (stepsDir && fs.existsSync(path.join(stepsDir, 'steps.json'))) {
+            try {
+                const steps = JSON.parse(fs.readFileSync(path.join(stepsDir, 'steps.json'), 'utf-8'));
+                info.stepCount = steps.length;
+            } catch (e) {}
+        }
+        return info;
+    } catch (e) { return null; }
+}
+
 // ── Start recording ───────────────────────────────────────────────────────────
 ipcMain.on('start-recording', async (event, url) => {
     session.url = url;
@@ -672,6 +834,14 @@ ipcMain.on('continue-recording', async (event, url) => {
 
 // ── Stop recording ────────────────────────────────────────────────────────────
 ipcMain.on('stop-recording', async (event) => {
+    if (traceRecorderProcess) {
+        // 通过 stdin 发送 STOP，让子进程优雅保存 trace 后退出
+        try { traceRecorderProcess.stdin.write('STOP\n'); } catch (e) {
+            try { traceRecorderProcess.kill(); } catch (e2) {}
+        }
+        event.reply('recording-stopped', { mode: 'trace' });
+        return;
+    }
     if (harOnlyRecording || harOnlyFinalizing) {
         await finishHarOnlyRecording();
         event.reply('recording-stopped', { mode: 'har-only' });
@@ -891,6 +1061,32 @@ ipcMain.on('generate-semantic', (event) => {
     if (session.seedData) {
         lines.push('6. **结合项目结构信息**（识别操作对应的表单实体、字段名称，提供准确的业务术语）');
     }
+    lines.push('');
+
+    // ★ 三源融合硬规则：每步必须结合 脚本 + HAR + 图片 交叉验证 ★
+    lines.push('## ⚠️ 强制规则：每一步必须三源融合');
+    lines.push('');
+    lines.push('生成每个步骤的语义时，**必须同时依据以下三源**，缺一不可：');
+    lines.push('1. **录制脚本**：Playwright 选择器，确定"点/填了什么、操作类型"');
+    lines.push('2. **HAR 网络**：该步触发的后端 API，确定"服务端实际做了什么"（如创建返回的 ID、提交是否 200、是否报错）');
+    lines.push('3. **前后截图**：`steps/` 目录下每步的 before/after 图片，**必须用视觉打开核对画面变化**——尤其画布拖拽等无语义元素(div/svg)的操作，只有看图才能确定实际效果');
+    lines.push('');
+    lines.push('要求：先看脚本 → 再看 API → **最后打开 before/after 图片视觉确认** → 三者一致后再写描述。若冲突，以**截图所见为准**并标注差异。');
+    lines.push('');
+    lines.push('下面已为每一步准备好三源证据清单（含图片路径），请逐步分析。');
+    lines.push('');
+
+    // 追加逐步三源证据清单
+    try {
+        const semInput = buildSemanticInput(session.dir);
+        lines.push(semInput.markdown);
+    } catch (e) {
+        console.error('[Semantic] 构建三源输入失败:', e);
+        lines.push('> （三源证据清单生成失败，请手动结合 steps/ 目录图片、network.har、ui-script.js 分析）');
+    }
+    lines.push('');
+
+    lines.push('## 输出');
     lines.push('');
     lines.push('输出格式为 Markdown，保存到：');
     lines.push(`\`${semFile}\``);
@@ -1395,6 +1591,9 @@ ipcMain.on('save-draft', async (event, { step }) => {
             savedFiles.push(label);
         }
     });
+
+    // 保存 trace 产物（trace.zip + steps 分步截图）
+    savedFiles.push(...saveTraceArtifacts(session.dir, destDir));
 
     // 保存草稿状态
     const draftState = {
@@ -2123,7 +2322,10 @@ function saveSessionFiles(srcDir, destDir, name) {
             savedFiles.push(label);
         }
     });
-    
+
+    // 保存 trace 产物（trace.zip + steps 分步截图）
+    savedFiles.push(...saveTraceArtifacts(srcDir, destDir));
+
     // 保存会话状态
     const sessionState = {
         savedAt: new Date().toISOString(),
