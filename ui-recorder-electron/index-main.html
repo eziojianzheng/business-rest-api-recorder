@@ -113,12 +113,12 @@
 
 <!-- ── Progress Bar ── -->
 <div id="progress-bar">
-  <div class="step-item active navigable" id="step-item-0" onclick="navigateToStep(0)" title="点击跳转到导入配置">
+  <div class="step-item active navigable" id="step-item-0" onclick="navigateToStep(0)" title="点击跳转到导入配置" style="display:none;">
     <div class="step-circle" id="step-circle-0">0</div>
     <div class="step-label">导入配置</div>
   </div>
-  <div class="step-connector" id="conn-0"></div>
-  <div class="step-item navigable" id="step-item-1" onclick="navigateToStep(1)" title="点击跳转到录制">
+  <div class="step-connector" id="conn-0" style="display:none;"></div>
+  <div class="step-item active navigable" id="step-item-1" onclick="navigateToStep(1)" title="点击跳转到录制">
     <div class="step-circle" id="step-circle-1">1</div>
     <div class="step-label">录制</div>
   </div>
@@ -127,8 +127,8 @@
     <div class="step-circle" id="step-circle-2">2</div>
     <div class="step-label">语义</div>
   </div>
-  <div class="step-connector" id="conn-2"></div>
-  <div class="step-item navigable" id="step-item-3" onclick="navigateToStep(3)" title="点击跳转到API调试">
+  <div class="step-connector" id="conn-2" style="display:none;"></div>
+  <div class="step-item navigable" id="step-item-3" onclick="navigateToStep(3)" title="点击跳转到API调试" style="display:none;">
     <div class="step-circle" id="step-circle-3">3</div>
     <div class="step-label">API调试</div>
   </div>
@@ -147,8 +147,8 @@
 <!-- ── Main Content ── -->
 <div id="main-content">
 
-  <!-- ══ Step 0: 导入配置 ══ -->
-  <div class="step-panel active" id="panel-0">
+  <!-- ══ Step 0: 导入配置（已隐藏） ══ -->
+  <div class="step-panel" id="panel-0">
     <div class="info-banner">
       <span>ℹ️</span>上传 CETA Seed Data JSON 文件，可生成完整的 API 文档或直接开始录制测试
     </div>
@@ -185,7 +185,7 @@
   </div>
 
   <!-- ══ Step 1: 录制 ══ -->
-  <div class="step-panel" id="panel-1">
+  <div class="step-panel active" id="panel-1">
     <div class="info-banner">
       <span>ℹ️</span>“开始录制 / 继续录制”会生成 UI 脚本和 HAR；“仅 HAR”使用最大化普通浏览器，不显示 Inspector 或控件属性浮层。
     </div>
@@ -248,7 +248,7 @@
       </div>
     </div>
     <div class="controls" style="justify-content:flex-end;">
-      <button class="btn-next" id="btn-to-step3" onclick="goToStep(3)">✓ 进入 API 调试 →</button>
+      <button class="btn-next" id="btn-to-step3" onclick="goToStep(3)" style="display:none;">✓ 进入 API 调试 →</button>
     </div>
   </div>
 
@@ -327,7 +327,7 @@
 const { ipcRenderer } = require('electron');
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let currentStep = 0;  // 从 0 开始
+let currentStep = 1;  // 导入配置已隐藏，默认从「录制」开始
 let sessionCreated = false;
 let recordingActive = false;
 let replayActive = false;
@@ -1054,8 +1054,31 @@ ipcRenderer.on('draft-saved', (e, data) => {
   }
 });
 
+// ── 检测当前工作区是否有未保存的数据 ──────────────────────────────────────────
+function hasWorkspaceData() {
+  const uiScript = document.getElementById('ui-script-edit')?.value?.trim()
+                || document.getElementById('ui-script-preview')?.value?.trim();
+  const semantic = document.getElementById('semantic-script-edit')?.value?.trim();
+  const apiScript = document.getElementById('api-script-edit')?.value?.trim()
+                 || document.getElementById('api-script-preview')?.value?.trim();
+  const apiCount = Number(document.getElementById('api-count')?.textContent || 0);
+  return !!(uiScript || semantic || apiScript || apiCount > 0);
+}
+
 // ── Open Session ──────────────────────────────────────────────────────────────
 function openSession() {
+  // 打开其他会话会用所选目录的内容覆盖当前工作区（ui-recorder-workspace），
+  // 且 steps/ 截图不参与同步。若当前有数据，先提示保存，避免丢失。
+  if (hasWorkspaceData()) {
+    const choice = confirm(
+      '⚠️ 打开其他会话会用所选会话的内容覆盖当前工作区！\n\n' +
+      '当前的 UI 脚本、语义脚本、API 脚本、HAR 都会被替换，未保存的内容将丢失。\n\n' +
+      '• 点「确定」：放弃当前内容，继续打开会话\n' +
+      '• 点「取消」：返回，先用「保存」按钮归档当前会话\n\n' +
+      '确定要继续打开吗？'
+    );
+    if (!choice) return;
+  }
   ipcRenderer.send('open-session');
 }
 
@@ -1325,7 +1348,10 @@ function renderMarkdown(md) {
 window.addEventListener('DOMContentLoaded', () => {
   // Request session info on load in case we're resuming
   ipcRenderer.send('get-session');
-  
+
+  // 导入配置已隐藏，默认进入「录制」步骤
+  goToStep(1);
+
   // 强制启用所有导航按钮，移除不必要的限制
   setTimeout(() => {
     document.getElementById('btn-to-step3').disabled = false;

@@ -10,6 +10,24 @@ let replayProcess = null;
 let harOnlyRecording = null;
 let harOnlyFinalizing = false;
 let traceRecorderProcess = null;   // 真人 codegen + trace 录制子进程
+let allowClose = false;            // 是否已确认可以关闭窗口（避免关闭提示死循环）
+
+// 检测当前工作区是否存在有价值的数据（关闭时用于提示保存）
+function workspaceHasData() {
+    if (!session || !session.dir) return false;
+    if ((session.uiScript && session.uiScript.trim())
+        || (session.semanticScript && session.semanticScript.trim())
+        || (session.apiScript && session.apiScript.trim())
+        || (session.harApis && session.harApis.length > 0)) {
+        return true;
+    }
+    // 兜底：检查磁盘上的核心产物文件
+    const files = ['ui-script.js', 'semantic-script.md', 'api-script.spec.js', 'network.har'];
+    return files.some(f => {
+        const p = path.join(session.dir, f);
+        try { return fs.existsSync(p) && fs.statSync(p).size > 0; } catch (e) { return false; }
+    });
+}
 
 function harEntriesToApis(entries) {
     return entries.map(e => ({
@@ -161,7 +179,108 @@ function createWindow() {
     if (process.argv.includes('--dev')) {
         mainWindow.webContents.openDevTools();
     }
+
+    // 关闭窗口前提示保存当前会话数据
+    mainWindow.on('close', (e) => {
+        if (allowClose) return;              // 已确认过，放行
+        if (!workspaceHasData()) return;     // 无数据，直接关闭
+
+        e.preventDefault();
+        const { dialog } = require('electron');
+        const choice = dialog.showMessageBoxSync(mainWindow, {
+            type: 'warning',
+            buttons: ['保存后关闭', '直接关闭', '取消'],
+            defaultId: 0,
+            cancelId: 2,
+            noLink: true,
+            title: '关闭前保存',
+            message: '当前工作区有未归档的数据',
+            detail: '关闭后工作区文件仍会保留在 ui-recorder-workspace，但若之后打开其他会话会被覆盖。\n\n建议先保存归档到独立目录。',
+        });
+
+        if (choice === 2) {
+            // 取消：不关闭
+            return;
+        }
+        if (choice === 0) {
+            // 保存后关闭：直接在主进程完成保存流程（渲染进程 prompt 在 Electron 28 不可用）
+            saveSessionBeforeClose();
+            return;
+        }
+        // 直接关闭
+        allowClose = true;
+        mainWindow.close();
+    });
 }
+
+// 关闭前保存：主进程内弹文件夹选择框并保存，成功后关闭窗口
+async function saveSessionBeforeClose() {
+    const { dialog } = require('electron');
+    if (!session || !session.dir) { allowClose = true; mainWindow.close(); return; }
+
+    const result = await dialog.showOpenDialog(mainWindow, {
+        title: '选择保存位置',
+        properties: ['openDirectory', 'createDirectory'],
+        buttonLabel: '保存到此处',
+    });
+
+    // 用户取消选择目录：再问是否仍要关闭
+    if (result.canceled || !result.filePaths[0]) {
+        const c = dialog.showMessageBoxSync(mainWindow, {
+            type: 'question',
+            buttons: ['返回', '不保存并关闭'],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+            title: '未保存',
+            message: '未选择保存位置，当前会话尚未保存。',
+            detail: '是否仍要关闭窗口？',
+        });
+        if (c === 1) { allowClose = true; mainWindow.close(); }
+        return;
+    }
+
+    try {
+        const safeName = `场景_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}`;
+        const timestamp = new Date().toLocaleDateString('zh-CN').replace(/\//g, '-');
+        const savedDir = path.join(result.filePaths[0], `${safeName}_${timestamp}`);
+        fs.mkdirSync(savedDir, { recursive: true });
+
+        const savedFiles = saveSessionFiles(session.dir, savedDir, safeName);
+        console.log(`[Save-before-close] 已保存到: ${savedDir}, 文件: ${savedFiles.join(', ')}`);
+
+        dialog.showMessageBoxSync(mainWindow, {
+            type: 'info',
+            buttons: ['关闭'],
+            noLink: true,
+            title: '已保存',
+            message: '当前会话已保存，即将关闭窗口。',
+            detail: `保存位置：${savedDir}\n\n包含：${savedFiles.join('、')}`,
+        });
+    } catch (e) {
+        console.error('[Save-before-close] 保存失败:', e);
+        const c = dialog.showMessageBoxSync(mainWindow, {
+            type: 'error',
+            buttons: ['返回', '仍要关闭'],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+            title: '保存失败',
+            message: '保存过程中出现错误。',
+            detail: String(e && e.message ? e.message : e),
+        });
+        if (c !== 1) return;
+    }
+
+    allowClose = true;
+    mainWindow.close();
+}
+
+// 渲染进程保存完成（或用户放弃保存）后，允许关闭窗口（保留兼容）
+ipcMain.on('proceed-close', () => {
+    allowClose = true;
+    if (mainWindow) mainWindow.close();
+});
 
 app.whenReady().then(() => {
     createWindow();
