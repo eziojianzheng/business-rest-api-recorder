@@ -1,10 +1,22 @@
 # Dependencies
 node_modules/
 
+# Local portable Node / Playwright browser payloads (downloaded during build, never commit)
+ui-recorder-electron/.node/
+ui-recorder-electron/.playwright-browsers/
+ui-recorder-electron/.playwright-installed
+ui-recorder-electron/自动下载
+
 # Build outputs
 dist/
 out/
 build/
+ui-recorder-electron/.builder-cache/
+ui-recorder-electron/.electron-cache/
+ui-recorder-electron/pack-build.log
+
+# Local test recordings (never commit)
+CETATesing/
 
 # IDE
 .vscode/
@@ -38,19 +50,12 @@ ui-recorder-electron/test-api.spec.js
 ui-recorder-electron/test-server/
 ui-recorder-electron/.last-run.json
 
-# ── crm-test-platform：运行时产生的数据忽略 ──
-crm-test-platform/run-history.json
-crm-test-platform/schedule.json
-crm-test-platform/node_modules/
-
 # 根目录调试脚本
 parse_har.js
 parse_har.py
 
-# ── 非工具：验证 demo / 录制数据 / 其他 ──
-trace-demo/
+# 本地录制样本
 13点/
-FobiddienUpdate/
 _*.js
 _*.json
 _*.md

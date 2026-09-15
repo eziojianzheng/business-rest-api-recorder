@@ -38,7 +38,6 @@ const userEvents = [];
 (async () => {
   const browser = await chromium.launch({
     headless: false,
-    channel: 'chrome',
     args: ['--start-maximized']
   });
 

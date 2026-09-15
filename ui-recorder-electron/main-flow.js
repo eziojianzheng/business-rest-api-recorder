@@ -1,8 +1,17 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { spawn, fork } = require('child_process');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const { buildSemanticInput } = require('./semantic-input-builder');
+
+if (app.isPackaged) {
+    const appDataDir = path.join(app.getPath('appData'), 'Business REST API Recorder');
+    const sessionDataDir = path.join(appDataDir, 'session-data');
+    fs.mkdirSync(sessionDataDir, { recursive: true });
+    app.setPath('userData', appDataDir);
+    app.setPath('sessionData', sessionDataDir);
+    app.commandLine.appendSwitch('disk-cache-dir', path.join(appDataDir, 'cache'));
+}
 
 let mainWindow;
 let codegenProcess = null;
@@ -11,6 +20,39 @@ let harOnlyRecording = null;
 let harOnlyFinalizing = false;
 let traceRecorderProcess = null;   // 真人 codegen + trace 录制子进程
 let allowClose = false;            // 是否已确认可以关闭窗口（避免关闭提示死循环）
+
+function getRuntimeRoot() {
+    return app.isPackaged ? app.getAppPath() : __dirname;
+}
+
+function runtimePath(...parts) {
+    return path.join(getRuntimeRoot(), ...parts);
+}
+
+function getWorkspaceDir() {
+    if (!app.isPackaged) return path.join(__dirname, '..', 'ui-recorder-workspace');
+    return path.join(app.getPath('documents'), 'Business REST API Recorder', 'ui-recorder-workspace');
+}
+
+function configureRuntimeEnvironment() {
+    if (app.isPackaged) {
+        process.env.PLAYWRIGHT_BROWSERS_PATH = path.join(process.resourcesPath, 'playwright-browsers');
+    }
+}
+
+function ensureReplayRuntime() {
+    const replayDir = path.join(app.getPath('userData'), 'replay-runtime');
+    fs.mkdirSync(replayDir, { recursive: true });
+    return replayDir;
+}
+
+function replayEnvironment(replayDir) {
+    return {
+        FORCE_COLOR: '0',
+        NODE_PATH: runtimePath('node_modules'),
+        PW_REPLAY_DIR: replayDir,
+    };
+}
 
 // 检测当前工作区是否存在有价值的数据（关闭时用于提示保存）
 function workspaceHasData() {
@@ -137,11 +179,12 @@ function runNodeScript(scriptPath, args, options = {}) {
     console.log('  - execPath:', process.execPath);
     console.log('  - scriptPath:', scriptPath);
     console.log('  - args:', args);
-    console.log('  - cwd:', options.cwd || __dirname);
+    const defaultCwd = options.cwd || getWorkspaceDir();
+    console.log('  - cwd:', defaultCwd);
     console.log('  - ELECTRON_RUN_AS_NODE:', env.ELECTRON_RUN_AS_NODE);
     
     const childProcess = spawn(process.execPath, [scriptPath, ...args], {
-        cwd: options.cwd || __dirname,
+        cwd: defaultCwd,
         stdio: options.stdio || ['ignore', 'pipe', 'pipe'],
         windowsHide: options.windowsHide !== false,
         env: env
@@ -175,7 +218,7 @@ function createWindow() {
             contextIsolation: false
         }
     });
-    mainWindow.loadFile('index-main.html');
+    mainWindow.loadFile(path.join(__dirname, 'index-main.html'));
     if (process.argv.includes('--dev')) {
         mainWindow.webContents.openDevTools();
     }
@@ -283,11 +326,11 @@ ipcMain.on('proceed-close', () => {
 });
 
 app.whenReady().then(() => {
+    configureRuntimeEnvironment();
     createWindow();
     
-    // 自动初始化 session，使用固定的 ui-recorder-workspace 目录
-    const workspaceRoot = path.join(__dirname, '..');
-    const dir = path.join(workspaceRoot, 'ui-recorder-workspace');
+    // 开发模式使用仓库工作区；安装版使用用户 Documents 下的可写目录
+    const dir = getWorkspaceDir();
     fs.mkdirSync(dir, { recursive: true });
     
     session = {
@@ -332,9 +375,8 @@ function cleanup() {
 // ── Create session ────────────────────────────────────────────────────────────
 ipcMain.on('create-session', (event, url) => {
     const id = `session-${Date.now()}`;
-    // 固定放在工作区根目录的 ui-recorder-workspace 下，Kiro 可以直接读写
-    const workspaceRoot = path.join(__dirname, '..'); // ceta-ai-skills 根目录
-    const dir = path.join(workspaceRoot, 'ui-recorder-workspace');
+    // 开发模式使用仓库工作区；安装版使用用户 Documents 下的可写目录
+    const dir = getWorkspaceDir();
     fs.mkdirSync(dir, { recursive: true });
 
     session = {
@@ -625,12 +667,12 @@ ipcMain.on('start-trace-recording', async (event, payload) => {
 
     mainWindow.webContents.send('recording-started', { url, mode: 'trace' });
 
-    const recorderScript = path.join(__dirname, 'trace-recorder.js');
+    const recorderScript = runtimePath('trace-recorder.js');
     // 注意：stdin 用 pipe，以便发送 STOP 信号
     traceRecorderProcess = runNodeScript(
         recorderScript,
         [url, outputFile, harFile, traceFile, shotsDir, stepsDir],
-        { cwd: __dirname, windowsHide: false, stdio: ['pipe', 'pipe', 'pipe'] }
+        { cwd: getWorkspaceDir(), windowsHide: false, stdio: ['pipe', 'pipe', 'pipe'] }
     );
 
     traceRecorderProcess.stdout.on('data', d => {
@@ -747,20 +789,18 @@ ipcMain.on('start-recording', async (event, url) => {
     // 通知前端清空显示
     mainWindow.webContents.send('recording-started', { url });
 
-    // 使用 Electron 内置的 Node.js 运行时，不依赖系统 Node.js
-    // playwright-core/cli.js 是 Playwright 的 CLI 入口
-    const playwrightCli = path.join(__dirname, 'node_modules', 'playwright-core', 'cli.js');
+    // 使用 Electron 内置 Node 运行随应用分发的 Playwright CLI
+    const playwrightCli = runtimePath('node_modules', 'playwright-core', 'cli.js');
     const args = [
         'codegen',
         '--output',   outputFile,
         '--save-har', harFile,
         '--target',   'playwright-test',
-        '--channel',  'chrome',
         url
     ];
 
     codegenProcess = runNodeScript(playwrightCli, args, {
-        cwd: __dirname,
+        cwd: getWorkspaceDir(),
         windowsHide: false
     });
 
@@ -857,7 +897,6 @@ ipcMain.on('start-har-recording', async (event, payload) => {
     try {
         const { chromium } = require('playwright');
         const browser = await chromium.launch({
-            channel: 'chrome',
             headless: false,
             args: ['--start-maximized']
         });
@@ -896,18 +935,17 @@ ipcMain.on('continue-recording', async (event, url) => {
 
     // 继续录制时，不清空任何文件，直接追加录制
 
-    const playwrightCli = path.join(__dirname, 'node_modules', 'playwright-core', 'cli.js');
+    const playwrightCli = runtimePath('node_modules', 'playwright-core', 'cli.js');
     const args = [
         'codegen',
         '--output',   outputFile,
         '--save-har', harFile,
         '--target',   'playwright-test',
-        '--channel',  'chrome',
         url
     ];
 
     codegenProcess = runNodeScript(playwrightCli, args, {
-        cwd: __dirname,
+        cwd: getWorkspaceDir(),
         windowsHide: false
     });
 
@@ -983,25 +1021,26 @@ ipcMain.on('replay-ui', async (event) => {
         return;
     }
 
-    // 读取最新脚本，复制到本地目录运行（避免路径空格问题）
+    // 将回放脚本写入用户可写目录，避免安装版向 app.asar / Program Files 写入
     const script = fs.readFileSync(scriptFile, 'utf-8');
-    const testFile = path.join(__dirname, 'replay-test.spec.js');
+    const replayDir = ensureReplayRuntime();
+    const testFile = path.join(replayDir, 'replay-test.spec.js');
     fs.writeFileSync(testFile, script, 'utf-8');
 
     mainWindow.webContents.send('replay-log', { type: 'info', msg: '开始回放...' });
     mainWindow.webContents.send('replay-log', { type: 'info', msg: `脚本: ${scriptFile}` });
 
-    // 使用 Electron 内置的 Node.js 运行时，不依赖系统 Node.js
-    const playwrightCli = path.join(__dirname, 'node_modules', '@playwright', 'test', 'cli.js');
+    const playwrightCli = runtimePath('node_modules', '@playwright', 'test', 'cli.js');
+    const configFile = runtimePath('playwright.config.js');
     
     replayProcess = runNodeScript(playwrightCli, [
         'test',
-        'replay-test.spec.js',
-        '--config=playwright.config.js',
+        testFile,
+        `--config=${configFile}`,
         '--reporter=line'
     ], {
-        cwd: __dirname,
-        env: { FORCE_COLOR: '0' }
+        cwd: replayDir,
+        env: replayEnvironment(replayDir)
     });
 
     replayProcess.stdout.on('data', d => {
@@ -1334,8 +1373,7 @@ ipcMain.on('generate-api-script', (event) => {
 ipcMain.on('replay-api', async (event) => {
     // 确保 session 已初始化
     if (!session.dir) {
-        const workspaceRoot = path.join(__dirname, '..');
-        session.dir = path.join(workspaceRoot, 'ui-recorder-workspace');
+        session.dir = getWorkspaceDir();
         fs.mkdirSync(session.dir, { recursive: true });
         console.log('[Replay API] Session dir was empty, initialized to:', session.dir);
     }
@@ -1347,26 +1385,26 @@ ipcMain.on('replay-api', async (event) => {
         return;
     }
 
-    // 复制到本地目录运行（避免路径空格问题）
+    // 将回放脚本写入用户可写目录，避免安装版向 app.asar / Program Files 写入
     const script = fs.readFileSync(apiFile, 'utf-8');
-    const testFile = path.join(__dirname, 'replay-api-test.spec.js');
+    const replayDir = ensureReplayRuntime();
+    const testFile = path.join(replayDir, 'replay-api-test.spec.js');
     fs.writeFileSync(testFile, script, 'utf-8');
 
+    const playwrightCli = runtimePath('node_modules', '@playwright', 'test', 'cli.js');
+    const configFile = runtimePath('playwright.config.js');
     mainWindow.webContents.send('replay-log', { type: 'info', msg: '开始 API 回放...' });
-    mainWindow.webContents.send('replay-log', { type: 'info', msg: `Playwright CLI: ${path.join(__dirname, 'node_modules', '@playwright', 'test', 'cli.js')}` });
+    mainWindow.webContents.send('replay-log', { type: 'info', msg: `Playwright CLI: ${playwrightCli}` });
     mainWindow.webContents.send('replay-log', { type: 'info', msg: `Electron 路径: ${process.execPath}` });
-
-    // 使用 Electron 内置的 Node.js 运行时，不依赖系统 Node.js
-    const playwrightCli = path.join(__dirname, 'node_modules', '@playwright', 'test', 'cli.js');
     
     replayProcess = runNodeScript(playwrightCli, [
         'test',
-        'replay-api-test.spec.js',
-        '--config=playwright.config.js',
+        testFile,
+        `--config=${configFile}`,
         '--reporter=line'
     ], {
-        cwd: __dirname,
-        env: { FORCE_COLOR: '0' },
+        cwd: replayDir,
+        env: replayEnvironment(replayDir),
         windowsHide: false
     });
 
@@ -1756,9 +1794,8 @@ ipcMain.on('open-session', async (event) => {
         try { draft = JSON.parse(fs.readFileSync(draftFile, 'utf-8')); } catch(e) {}
     }
 
-    // 同步到 ui-recorder-workspace 目录
-    const workspaceRoot = path.join(__dirname, '..');
-    const workspaceDir = path.join(workspaceRoot, 'ui-recorder-workspace');
+    // 同步到当前应用工作区目录
+    const workspaceDir = getWorkspaceDir();
     fs.mkdirSync(workspaceDir, { recursive: true });
 
     // 定义需要同步的文件
@@ -1795,6 +1832,17 @@ ipcMain.on('open-session', async (event) => {
     });
 
     console.log('[Open] 同步文件到 workspace: ' + syncedFiles.join(', '));
+
+    // 同步 trace 和分步截图，保证恢复后的三源证据与脚本属于同一会话
+    const traceSource = path.join(dir, 'trace.zip');
+    const traceDest = path.join(workspaceDir, 'trace.zip');
+    if (fs.existsSync(traceSource)) fs.copyFileSync(traceSource, traceDest);
+    else if (fs.existsSync(traceDest)) fs.unlinkSync(traceDest);
+
+    const stepsSource = path.join(dir, 'steps');
+    const stepsDest = path.join(workspaceDir, 'steps');
+    fs.rmSync(stepsDest, { recursive: true, force: true });
+    if (fs.existsSync(stepsSource)) copyDirRecursive(stepsSource, stepsDest);
 
     // 恢复 session（指向 workspace 目录）
     session.dir = workspaceDir;
@@ -1850,54 +1898,7 @@ ipcMain.on('open-folder', (event, { folderPath }) => {
     shell.openPath(folderPath);
 });
 
-// ── Helper: copy session files ────────────────────────────────────────────────
-function saveSessionFiles(srcDir, destDir, name) {
-    const savedFiles = [];
-
-    // 3 个核心脚本 + HAR
-    const filesToSave = [
-        { src: 'ui-script.js',       label: '录制脚本' },
-        { src: 'semantic-script.md', label: '语义脚本' },
-        { src: 'api-script.spec.js', label: 'API 脚本' },
-        { src: 'network.har',        label: '网络录制 (HAR)' },
-        { src: 'draft-state.json',   label: '草稿状态' },
-    ];
-
-    filesToSave.forEach(({ src, label }) => {
-        const srcPath = path.join(srcDir, src);
-        if (fs.existsSync(srcPath)) {
-            fs.copyFileSync(srcPath, path.join(destDir, src));
-            savedFiles.push(label);
-        }
-    });
-
-    const readme = [
-        `# ${name}`,
-        '',
-        `> 保存时间：${new Date().toLocaleString('zh-CN')}`,
-        '',
-        '## 核心文件',
-        '| 文件 | 说明 |',
-        '|------|------|',
-        '| `ui-script.js` | Playwright UI 录制脚本 |',
-        '| `semantic-script.md` | 业务语义描述 |',
-        '| `api-script.spec.js` | API 测试脚本（可直接运行） |',
-        '| `network.har` | 录制的网络请求 |',
-        '',
-        '## 恢复会话',
-        '在 UI Recorder 中点击「打开会话」，选择此目录即可恢复。',
-        '',
-        '## 运行 API 测试',
-        '```bash',
-        'npx playwright test api-script.spec.js --reporter=line',
-        '```',
-    ].join('\n');
-
-    fs.writeFileSync(path.join(destDir, 'README.md'), readme, 'utf-8');
-    savedFiles.push('README.md');
-    return savedFiles;
-}
-
+// ── Restore current session ───────────────────────────────────────────────────
 ipcMain.on('get-session', (event) => {
     // 从磁盘恢复上次 session 内容
     if (session.dir && fs.existsSync(session.dir)) {
@@ -1935,22 +1936,28 @@ ipcMain.on('get-session', (event) => {
             const tmpScript = path.join(session.dir, '_parse_har_tmp.js');
             fs.writeFileSync(tmpScript, parseScript);
 
-            const { execFile } = require('child_process');
-            execFile(process.execPath, [tmpScript, harPath], { maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
+            const parser = runNodeScript(tmpScript, [harPath], {
+                cwd: session.dir,
+                windowsHide: true,
+            });
+            let stdout = '';
+            let stderr = '';
+            parser.stdout.on('data', data => { stdout += data.toString(); });
+            parser.stderr.on('data', data => { stderr += data.toString(); });
+            parser.on('close', code => {
                 try { fs.unlinkSync(tmpScript); } catch {}
-                if (!err && stdout) {
+                if (code === 0 && stdout) {
                     try {
                         session.harApis = JSON.parse(stdout);
                         console.log(`[get-session] HAR parsed: ${session.harApis.length} API entries`);
-                        // 通知前端更新 API 列表
                         if (mainWindow && !mainWindow.isDestroyed()) {
                             mainWindow.webContents.send('har-apis-loaded', session.harApis);
                         }
                     } catch (e2) {
                         console.warn('[get-session] HAR parse result error:', e2.message);
                     }
-                } else if (err) {
-                    console.warn('[get-session] HAR parse failed:', err.message);
+                } else if (code !== 0) {
+                    console.warn('[get-session] HAR parse failed:', stderr || `exit code ${code}`);
                 }
             });
         }
@@ -1958,43 +1965,7 @@ ipcMain.on('get-session', (event) => {
     event.reply('session-info', session);
 });
 
-// ── Write context file for Kiro AI ───────────────────────────────────────────
-function writeKiroContext() {
-    if (!session.dir) return;
-
-    const businessApis = session.harApis.filter(a => {
-        const u = a.url.toLowerCase();
-        return (u.includes('/api/') || a.mimeType.includes('json')) &&
-               !u.match(/\.(js|css|png|jpg|svg|ico|woff)(\?|$)/);
-    });
-
-    const ctx = {
-        sessionId:     session.id,
-        url:           session.url,
-        step:          session.step,
-        uiScriptFile:  path.join(session.dir, 'ui-script.js'),
-        harFile:       path.join(session.dir, 'network.har'),
-        semanticFile:  path.join(session.dir, 'semantic-script.md'),
-        apiScriptFile: path.join(session.dir, 'api-script.spec.js'),
-        summary: {
-            uiSteps:     countUiSteps(session.uiScript),
-            totalApis:   session.harApis.length,
-            businessApis: businessApis.length,
-            apiList:     businessApis.slice(0, 20).map(a => `${a.method} ${a.url} → ${a.status}`)
-        }
-    };
-
-    fs.writeFileSync(
-        path.join(session.dir, 'kiro-context.json'),
-        JSON.stringify(ctx, null, 2),
-        'utf-8'
-    );
-
-    // Also write a human-readable prompt file for Kiro
-    const prompt = buildKiroPrompt(ctx, session);
-    fs.writeFileSync(path.join(session.dir, 'kiro-prompt.md'), prompt, 'utf-8');
-}
-
+// ── Build human-readable Kiro prompt ─────────────────────────────────────────
 function buildKiroPrompt(ctx, session) {
     const lines = [];
     lines.push('# UI Recorder - Kiro AI Context');

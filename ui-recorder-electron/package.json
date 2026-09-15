@@ -1,12 +1,15 @@
 {
-  "name": "ui-recorder-electron",
+  "name": "business-rest-api-recorder",
   "version": "2.0.0",
-  "description": "API Recording and Test Script Generation Tool - 基于 Playwright 的 API 录制与测试脚本生成工具",
+  "description": "基于 Playwright 的业务 REST API 录制与语义分析工具",
   "main": "main-flow.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "install-playwright": "npm install playwright && npx playwright install chromium"
+    "install:browser": "node scripts/prepare-browser.js",
+    "pack:win": "npm run install:browser && electron-builder --win dir --x64",
+    "dist:win": "npm run install:browser && electron-builder --win nsis portable --x64",
+    "dist:win:ci": "electron-builder --win nsis portable --x64 --publish never"
   },
   "keywords": [
     "electron",
@@ -18,11 +21,77 @@
   ],
   "author": "CETA Team",
   "license": "MIT",
-  "devDependencies": {
-    "@playwright/test": "^1.60.0",
-    "electron": "^28.0.0"
-  },
   "dependencies": {
-    "playwright": "^1.40.0"
+    "@playwright/test": "1.60.0",
+    "playwright": "1.60.0"
+  },
+  "devDependencies": {
+    "electron": "28.3.3",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "com.ceta.businessrestapirecorder",
+    "productName": "Business REST API Recorder",
+    "asar": false,
+    "electronDist": "node_modules/electron/dist",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main-flow.js",
+      "index-main.html",
+      "semantic-input-builder.js",
+      "step-builder.js",
+      "trace-recorder.js",
+      "playwright.config.js",
+      "package.json",
+      "node_modules/**/*",
+      "!node_modules/electron{,/**/*}",
+      "!node_modules/electron-builder{,/**/*}",
+      "!node_modules/app-builder-bin{,/**/*}",
+      "!node_modules/builder-util{,/**/*}",
+      "!node_modules/builder-util-runtime{,/**/*}",
+      "!node_modules/dmg-builder{,/**/*}",
+      "!node_modules/electron-publish{,/**/*}",
+      "!node_modules/@electron{,/**/*}",
+      "!node_modules/@develar{,/**/*}"
+    ],
+    "extraResources": [
+      {
+        "from": ".playwright-browsers",
+        "to": "playwright-browsers",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-${arch}-setup.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Business REST API Recorder"
+    }
   }
 }
