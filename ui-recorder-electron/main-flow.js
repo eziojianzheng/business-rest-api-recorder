@@ -21,8 +21,11 @@ let harOnlyFinalizing = false;
 let traceRecorderProcess = null;   // 真人 codegen + trace 录制子进程
 let allowClose = false;            // 是否已确认可以关闭窗口（避免关闭提示死循环）
 
+// 需要以真实文件运行的资源（Playwright CLI、子进程脚本）位于 asar 解包目录，
+// 因为子进程无法直接从 app.asar 内执行脚本。
 function getRuntimeRoot() {
-    return app.isPackaged ? app.getAppPath() : __dirname;
+    if (!app.isPackaged) return __dirname;
+    return app.getAppPath().replace(/app\.asar$/, 'app.asar.unpacked');
 }
 
 function runtimePath(...parts) {
@@ -30,13 +33,56 @@ function runtimePath(...parts) {
 }
 
 function getWorkspaceDir() {
-    if (!app.isPackaged) return path.join(__dirname, '..', 'ui-recorder-workspace');
-    return path.join(app.getPath('documents'), 'Business REST API Recorder', 'ui-recorder-workspace');
+    return path.join(getKiroWorkspaceRoot(), 'ui-recorder-workspace');
 }
 
 function configureRuntimeEnvironment() {
     if (app.isPackaged) {
         process.env.PLAYWRIGHT_BROWSERS_PATH = path.join(process.resourcesPath, 'playwright-browsers');
+    }
+}
+
+// 工作区根目录：
+// - 开发模式：仓库根目录
+// - Portable 版：exe 同级的数据目录（绿色便携，拷走即用）
+// - 安装版：文档/Business REST API Recorder
+function getKiroWorkspaceRoot() {
+    if (!app.isPackaged) return path.join(__dirname, '..');
+    if (process.env.PORTABLE_EXECUTABLE_DIR) {
+        return path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'Business REST API Recorder-data');
+    }
+    return path.join(app.getPath('documents'), 'Business REST API Recorder');
+}
+
+// 首次启动时把随包携带的 Kiro 集成资源（skills/hooks/.kiro）释放到工作区，
+// 用户用 Kiro 打开该目录即可自动协作。仅在打包版执行，且已存在则不覆盖。
+function deployKiroAssets() {
+    if (!app.isPackaged) return;
+    try {
+        const root = getKiroWorkspaceRoot();
+        fs.mkdirSync(root, { recursive: true });
+        const assets = ['skills', 'hooks', '.kiro'];
+        for (const name of assets) {
+            const src = path.join(process.resourcesPath, 'kiro-assets', name);
+            const dest = path.join(root, name);
+            if (fs.existsSync(src) && !fs.existsSync(dest)) {
+                copyDirRecursive(src, dest);
+                console.log(`[Kiro] 已释放集成资源: ${dest}`);
+            }
+        }
+        const readme = path.join(root, 'KIRO-README.md');
+        if (!fs.existsSync(readme)) {
+            fs.writeFileSync(readme, [
+                '# 用 Kiro 协作',
+                '',
+                '用 Kiro 打开当前文件夹作为工作区，即可对本工具生成的录制、语义与 API 文件进行协作。',
+                '',
+                '- `ui-recorder-workspace/`：本工具生成的会话数据',
+                '- `skills/`、`hooks/`、`.kiro/`：Kiro 协作能力（首次启动自动释放）',
+            ].join('\n'), 'utf-8');
+        }
+    } catch (e) {
+        console.warn('[Kiro] 释放集成资源失败:', e.message);
     }
 }
 
@@ -52,6 +98,31 @@ function replayEnvironment(replayDir) {
         NODE_PATH: runtimePath('node_modules'),
         PW_REPLAY_DIR: replayDir,
     };
+}
+
+// 开始新录制时统一清理旧产物（脚本 + HAR + Trace 图片/steps 等）。
+// 仅"开始"类录制调用；"继续"录制不调用，以便追加。
+function clearRecordingArtifacts(dir) {
+    const files = [
+        'ui-script.js',
+        'network.har',
+        'trace.zip',
+        'final-after.jpeg',
+        'semantic-script.md',
+        'api-script.spec.js',
+        'semantic-context.md',
+        'api-context.md',
+        'semantic-approved.flag',
+        'draft-state.json',
+    ];
+    for (const name of files) {
+        const p = path.join(dir, name);
+        try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) {}
+    }
+    const dirs = ['steps', 'trace-extracted'];
+    for (const name of dirs) {
+        try { fs.rmSync(path.join(dir, name), { recursive: true, force: true }); } catch (e) {}
+    }
 }
 
 // 检测当前工作区是否存在有价值的数据（关闭时用于提示保存）
@@ -327,6 +398,7 @@ ipcMain.on('proceed-close', () => {
 
 app.whenReady().then(() => {
     configureRuntimeEnvironment();
+    deployKiroAssets();
     createWindow();
     
     // 开发模式使用仓库工作区；安装版使用用户 Documents 下的可写目录
@@ -646,18 +718,8 @@ ipcMain.on('start-trace-recording', async (event, payload) => {
     const shotsDir   = path.join(session.dir, 'trace-extracted');
     const stepsDir   = path.join(session.dir, 'steps');
 
-    // 清空旧数据（与普通录制一致）
-    const filesToClean = [
-        'ui-script.js', 'network.har', 'trace.zip', 'semantic-script.md',
-        'api-script.spec.js', 'semantic-context.md', 'api-context.md',
-        'semantic-approved.flag', 'draft-state.json'
-    ];
-    filesToClean.forEach(fileName => {
-        const filePath = path.join(session.dir, fileName);
-        if (fs.existsSync(filePath)) { try { fs.unlinkSync(filePath); } catch (e) {} }
-    });
-    fs.rmSync(shotsDir, { recursive: true, force: true });
-    fs.rmSync(stepsDir, { recursive: true, force: true });
+    // 开始新录制：统一清理旧产物（脚本 + HAR + Trace 图片/steps）
+    clearRecordingArtifacts(session.dir);
 
     session.uiScript = '';
     session.semanticScript = '';
@@ -759,25 +821,8 @@ ipcMain.on('start-recording', async (event, url) => {
     const outputFile = path.join(session.dir, 'ui-script.js');
     const harFile    = path.join(session.dir, 'network.har');
 
-    // 开始新录制时，清空所有之前的脚本文件和内存数据
-    const filesToClean = [
-        'ui-script.js',
-        'network.har',
-        'semantic-script.md',
-        'api-script.spec.js',
-        'semantic-context.md',
-        'api-context.md',
-        'semantic-approved.flag',
-        'draft-state.json'
-    ];
-    
-    filesToClean.forEach((fileName) => {
-        const filePath = path.join(session.dir, fileName);
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-            console.log('[Record] 清理旧文件: ' + fileName);
-        }
-    });
+    // 开始新录制：统一清理旧产物（脚本 + HAR + Trace 图片/steps）
+    clearRecordingArtifacts(session.dir);
 
     // 清空 session 内存数据
     session.uiScript = '';
@@ -879,14 +924,8 @@ ipcMain.on('start-har-recording', async (event, payload) => {
         : targetHar;
 
     if (!continueMode) {
-        const filesToClean = [
-            'ui-script.js', 'network.har', 'semantic-script.md', 'api-script.spec.js',
-            'semantic-context.md', 'api-context.md', 'semantic-approved.flag', 'draft-state.json'
-        ];
-        filesToClean.forEach(fileName => {
-            const filePath = path.join(session.dir, fileName);
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        });
+        // 开始新录制：统一清理旧产物（脚本 + HAR + Trace 图片/steps）
+        clearRecordingArtifacts(session.dir);
         session.uiScript = '';
         session.semanticScript = '';
         session.apiScript = '';

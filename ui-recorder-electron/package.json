@@ -32,7 +32,16 @@
   "build": {
     "appId": "com.ceta.businessrestapirecorder",
     "productName": "Business REST API Recorder",
-    "asar": false,
+    "asar": true,
+    "asarUnpack": [
+      "trace-recorder.js",
+      "step-builder.js",
+      "semantic-input-builder.js",
+      "playwright.config.js",
+      "node_modules/playwright/**/*",
+      "node_modules/playwright-core/**/*",
+      "node_modules/@playwright/**/*"
+    ],
     "electronDist": "node_modules/electron/dist",
     "directories": {
       "output": "dist"
@@ -60,6 +69,27 @@
       {
         "from": ".playwright-browsers",
         "to": "playwright-browsers",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../skills",
+        "to": "kiro-assets/skills",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../hooks",
+        "to": "kiro-assets/hooks",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../.kiro",
+        "to": "kiro-assets/.kiro",
         "filter": [
           "**/*"
         ]
